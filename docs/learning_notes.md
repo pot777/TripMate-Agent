@@ -41,3 +41,20 @@ AI应用生态主要集中在Python：
 - LangGraph
 - Transformers
 - OpenAI SDK
+
+
+# TripMate总体架构
+
+用户
+ |
+Vue前端
+ |
+FastAPI后端
+ |
+Agent模块
+ |
+LLM
+ |
+Tools / RAG / Memory
+ |
+返回结果
