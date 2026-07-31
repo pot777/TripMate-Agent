@@ -21,5 +21,5 @@ def chat(message: str):
 
     return {
         "user": message,
-        "answer": answer
+        "answer": answer.model_dump()
     }
