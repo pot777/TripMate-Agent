@@ -85,13 +85,15 @@ API调用的优势是零硬件成本、按token付费、能直接用最新最强
 
 “严格说两者都不是。它学的是高维空间中的统计关联——哪些词在哪些语境下共现。比如它知道‘苹果’和‘手机’在科技语境下共现，是因为训练数据里这些模式出现了亿万次。这不是人类意义上的‘理解’，也不是SQL式的‘记忆’，而是通过神经网络的分布式表征压缩了整个语料的统计规律。这也是为什么它能做推理（模式泛化）但也会产生事实性错误——因为它没区分过‘真实’和‘虚构’文本的区别。”
 
-知识点	掌握程度	补充说明
-自回归 vs 自编码	必会	GPT是自回归（单向），BERT是自编码（双向）
-语言模型目标函数	必会	交叉熵损失 = -Σlog P(wi|context)
-采样策略	必会	Greedy / Beam Search / Top-k / Top-p / Temperature
-困惑度（Perplexity）	了解	2^{交叉熵}，衡量模型对序列的“惊讶程度”
-因果掩码（Causal Mask）	必会	防止训练时看到未来token，下三角掩码
-LLM的“理解”本质	加分	分布式表征+统计关联，不是符号逻辑
+### 完整知识面
+| 知识点 | 掌握程度 | 补充说明 |
+|---|---|---|
+| 自回归 vs 自编码 | 必会 | GPT是自回归（单向），BERT是自编码（双向） |
+| 语言模型目标函数 | 必会 | 交叉熵损失 = -Σlog P(wi\|context) |
+| 采样策略 | 必会 | Greedy / Beam Search / Top-k / Top-p / Temperature |
+| 困惑度（Perplexity） | 了解 | 2^{交叉熵}，衡量模型对序列的“惊讶程度” |
+| 因果掩码（Causal Mask） | 必会 | 防止训练时看到未来token，下三角掩码 |
+| LLM的“理解”本质 | 加分 | 分布式表征+统计关联，不是符号逻辑 |
 
 
 ## Q2：Transformer为什么适合LLM？
@@ -116,16 +118,17 @@ LLM的“理解”本质	加分	分布式表征+统计关联，不是符号逻�
 
 “O(n²)在长序列上逐渐成为天花板，而且Attention的‘全局交互’在超长上下文（如100万token）中大部分计算其实是冗余的——模型不需要看每一个token。Mamba这类选择性状态空间模型用O(n)复杂度同时保持线性记忆，在某些长序列任务上性能匹敌或超过Transformer。但Transformer的生态优势（硬件优化、预训练权重、社区工具）太强，短期内不会被完全替代，更多是融合思路（如Transformer + Mamba混合架构）。”
 
-
-知识点	掌握程度	补充说明
-Self-Attention公式	必会	Attention(Q,K,V)=softmax(QK^T/√d_k)V
-Multi-Head	必会	多头拼接后投影，头数通常8-96
-位置编码	必会	Sin/Cos绝对位置或RoPE相对位置
-残差连接+LayerNorm	必会	Pre-Norm架构更稳定（GPT用了Post-Norm变体）
-FFN（前馈网络）	必会	两层线性+GELU激活，参数占比2/3
-O(n²)复杂度	必会	计算和内存都随序列长度平方增长
-KV Cache	加分	推理时缓存已生成的K、V，避免重复计算
-Mamba / 线性Attention	加分	了解为何要替代Transformer及局限
+### 完整知识面
+| 知识点 | 掌握程度 | 补充说明 |
+|---|---|---|
+| Self-Attention公式 | 必会 | Attention(Q,K,V)=softmax(QK^T/√d_k)V |
+| Multi-Head | 必会 | 多头拼接后投影，头数通常8-96 |
+| 位置编码 | 必会 | Sin/Cos绝对位置或RoPE相对位置 |
+| 残差连接+LayerNorm | 必会 | Pre-Norm架构更稳定（GPT用了Post-Norm变体） |
+| FFN（前馈网络） | 必会 | 两层线性+GELU激活，参数占比2/3 |
+| O(n²)复杂度 | 必会 | 计算和内存都随序列长度平方增长 |
+| KV Cache | 加分 | 推理时缓存已生成的K、V，避免重复计算 |
+| Mamba / 线性Attention | 加分 | 了解为何要替代Transformer及局限 |
 
 
 
@@ -151,16 +154,17 @@ Mamba / 线性Attention	加分	了解为何要替代Transformer及局限
 
 “第一计费：OpenAI按Token计费，输入输出都算。第二上下文窗口：模型说8K是指Token数，不是字符数或字数。中文场景下你估1汉字≈1.5Token、1英文单词≈1.3Token快速估算。第三截断风险：超长输入会被截断或报错，需要在调用前做Token计数（用tiktoken库）。第四成本优化：System Prompt和少样本示例也占Token，尽量精简。面试时提到‘中文同语义下比英文多30-50% Token’是加分项。”
 
-完整知识面
-知识点	掌握程度	补充说明
-BPE算法	必会	迭代合并高频对，核心是统计+贪心
-WordPiece	了解	BERT用，基于似然增加而非频次
-SentencePiece	了解	直接处理原始文本，无需预分词，适合多语言
-Unigram	了解	T5用，基于概率模型删除低质量token
-词表大小权衡	必会	Embedding参数量 = vocab_size × hidden_size
-UTF-8编码	了解	中文1字=3字节，BPE在字节级操作
-tiktoken	加分	OpenAI官方Token计数工具
-中英文Token差异	加分	中文更费Token，面试被问概率极高
+### 完整知识面
+| 知识点 | 掌握程度 | 补充说明 |
+|---|---|---|
+| BPE算法 | 必会 | 迭代合并高频对，核心是统计+贪心 |
+| WordPiece | 了解 | BERT用，基于似然增加而非频次 |
+| SentencePiece | 了解 | 直接处理原始文本，无需预分词，适合多语言 |
+| Unigram | 了解 | T5用，基于概率模型删除低质量token |
+| 词表大小权衡 | 必会 | Embedding参数量 = vocab_size × hidden_size |
+| UTF-8编码 | 了解 | 中文1字=3字节，BPE在字节级操作 |
+| tiktoken | 加分 | OpenAI官方Token计数工具 |
+| 中英文Token差异 | 加分 | 中文更费Token，面试被问概率极高 |
 
 ## Q4：LLM为什么会幻觉？
 面试高频追问序列
@@ -188,16 +192,17 @@ tiktoken	加分	OpenAI官方Token计数工具
 
 “三层防线：第一层——训练/微调阶段：在SFT数据中加入拒答样本（‘我不知道’），用RLHF偏好数据惩罚编造行为。第二层——推理阶段：用RAG检索外部知识；对数学/时间敏感问题强制走Tool Calling；设置系统Prompt强调事实性。第三层——后处理：生成后做事实一致性检查（如用另一个模型评估），或把答案中的事实性陈述单独提取出来做二次检索验证。面试时能分这三层说明有实战经验。”
 
-完整知识面
-知识点	掌握程度	补充说明
-幻觉分类	必会	事实冲突/输入冲突/上下文冲突
-RAG原理	必会	检索→拼接→生成，开卷考试
-Tool Calling	必会	结构化输出+外部API调用
-RLHF对幻觉的作用	必会	改变奖励模型偏好，但治标不治本
-知识编辑（Knowledge Editing）	了解	直接修改模型权重修正特定事实
-事实性评估基准	了解	TruthfulQA、HaluEval、FActScore
-校准（Calibration）	加分	模型对自己预测的置信度是否准确
-上下文学习（ICL）注入事实	加分	在Prompt里放正确事实作为少样本示例
+### 完整知识面
+| 知识点 | 掌握程度 | 补充说明 |
+|---|---|---|
+| 幻觉分类 | 必会 | 事实冲突/输入冲突/上下文冲突 |
+| RAG原理 | 必会 | 检索→拼接→生成，开卷考试 |
+| Tool Calling | 必会 | 结构化输出+外部API调用 |
+| RLHF对幻觉的作用 | 必会 | 改变奖励模型偏好，但治标不治本 |
+| 知识编辑（Knowledge Editing） | 了解 | 直接修改模型权重修正特定事实 |
+| 事实性评估基准 | 了解 | TruthfulQA、HaluEval、FActScore |
+| 校准（Calibration） | 加分 | 模型对自己预测的置信度是否准确 |
+| 上下文学习（ICL）注入事实 | 加分 | 在Prompt里放正确事实作为少样本示例 |
 
 ## Q5：什么是Agent？
 面试高频追问序列
@@ -225,14 +230,15 @@ RLHF对幻觉的作用	必会	改变奖励模型偏好，但治标不治本
 
 “RAG可以看作Agent的特例或子集。RAG只有‘检索工具’，Agent可能有几十种工具。RAG流程固定（检索→生成），Agent流程动态（自主决定下一步）。但从架构角度看，RAG就是Agent的一个简化版——LLM + 一个工具（检索器）+ 单步执行。Agent是RAG的泛化，RAG是Agent的最小可行实现。面试时被问‘Agent和RAG的区别’，回答‘Agent包含RAG，但扩展了规划、多工具和循环决策’是最清晰的表达。”
 
-完整知识面
-知识点	掌握程度	补充说明
-Agent定义（LLM+规划+工具+记忆）	必会	范式转换：问答→任务完成
-ReAct模式	必会	Thought→Action→Observation循环
-CoT / ToT	了解	思维链/思维树，规划算法
-工具调用（Tool Calling）	必会	结构化输出（JSON）+外部解析执行
-记忆系统	必会	短期（上下文窗口）+长期（向量检索）
-Self-Reflection / Self-Correction	加分	模型自我评估结果正确性
-多Agent系统	加分	角色分工+协作+辩论
-Agent评估	加分	任务完成率 vs 回答准确率
-LangChain / AutoGen	了解	主流Agent框架，知道概念即可
+### 完整知识面
+| 知识点 | 掌握程度 | 补充说明 |
+|---|---|---|
+| Agent定义（LLM+规划+工具+记忆） | 必会 | 范式转换：问答→任务完成 |
+| ReAct模式 | 必会 | Thought→Action→Observation循环 |
+| CoT / ToT | 了解 | 思维链/思维树，规划算法 |
+| 工具调用（Tool Calling） | 必会 | 结构化输出（JSON）+外部解析执行 |
+| 记忆系统 | 必会 | 短期（上下文窗口）+长期（向量检索） |
+| Self-Reflection / Self-Correction | 加分 | 模型自我评估结果正确性 |
+| 多Agent系统 | 加分 | 角色分工+协作+辩论 |
+| Agent评估 | 加分 | 任务完成率 vs 回答准确率 |
+| LangChain / AutoGen | 了解 | 主流Agent框架，知道概念即可 |
