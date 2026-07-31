@@ -12,9 +12,14 @@ def root():
         "message": "TripMate Agent Backend Running"
     }
 
+from app.llm import chat_with_llm
+
 @app.get("/chat")
 def chat(message: str):
+
+    answer = chat_with_llm(message)
+
     return {
         "user": message,
-        "answer": "这里以后接入大语言模型"
+        "answer": answer
     }
