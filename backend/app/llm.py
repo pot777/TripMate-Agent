@@ -68,3 +68,18 @@ def chat_with_llm(message: str):
 
     except Exception as e:
         return f"模型调用失败：{str(e)}"
+
+
+def chat_raw(message: str):
+
+    response = client.chat.completions.create(
+        model="deepseek-v4-flash",
+        messages=[
+            {
+                "role": "user",
+                "content": message
+            }
+        ]
+    )
+
+    return response.choices[0].message.content
