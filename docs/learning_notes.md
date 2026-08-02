@@ -65,3 +65,42 @@ LLM输出结构化指令（JSON），外部系统执行真实操作（API/计算
 ### 3. LangChain是什么？
 构建LLM应用的开发框架，封装了Prompt管理、Chain、Tool、Memory等组件。
 计划Week 3使用LangGraph实现Agent工作流。
+
+## Day3 - Agent Loop
+
+Agent不是一个新的模型，而是一种应用架构。
+Agent是什么？ --Agent是一种利用LLM作为推理核心，通过规划、工具调用和环境反馈完成复杂任务的智能系统。
+
+核心组成：
+
+1. LLM
+负责理解需求和决策
+2. Tool
+提供外部能力
+3. Memory
+保存历史信息
+4. Planning
+拆解任务
+
+
+基本流程：
+
+User Goal
+↓
+LLM Decision
+↓
+Action
+↓
+Tool
+↓
+Observation
+↓
+LLM继续决策
+
+当前版本：LLM Application + Tool模块
+未来升级：完整Agent
+增加：
+- Function Calling
+- Tool Router
+- Agent Loop
+- External API

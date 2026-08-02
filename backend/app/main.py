@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-
+from .agent import run_agent
 
 app = FastAPI(
     title="TripMate Agent API"
@@ -17,9 +17,9 @@ from app.llm import chat_with_llm
 @app.get("/chat")
 def chat(message: str):
 
-    answer = chat_with_llm(message)
+    answer = run_agent(message)
 
     return {
         "user": message,
-        "answer": answer.model_dump()
+        "answer": answer.model_dump() if hasattr(answer,"model_dump") else answer
     }
