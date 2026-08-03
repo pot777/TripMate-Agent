@@ -106,83 +106,204 @@ LLM继续决策
 - External API
 
 ## Day4 - 当前调用链
-
 main.py
-
 /chat接口
-
 ↓
-
 agent.py
-
 run_agent()
-
 ↓
-
 agent.py
+decide_action()
+↓
+llm.py
+chat_raw()
+↓
+DeepSeek
+返回Action JSON
+↓
+agent.py
+execute_tool()
+↓
+tools/registry.py
+找到工具
+↓
+tools/weather.py
+执行天气查询
+↓
+agent.py
+生成Observation
+↓
+agent.py
+final_prompt
+↓
+llm.py
+chat_with_llm()
+↓
+DeepSeek
+返回旅行JSON
+↓
+models.py
+TravelPlan校验
+↓
+FastAPI返回
+
+### ReAct Agent实践
+
+传统LLM应用：
+用户输入
+↓
+LLM
+↓
+答案
+
+Agent：
+用户目标
+↓
+LLM Planner
+↓
+生成Action
+↓
+Tool执行
+↓
+Observation
+↓
+LLM整合结果
+↓
+Final Answer
+
+
+在TripMate-Agent中：
+
+1. decide_action()
+负责让LLM决定是否调用工具
+2. registry.py
+维护工具名称和函数映射
+3. execute_tool()
+负责执行工具
+4. chat_with_llm()
+负责最终结构化生成
+
+
+## Day5 - Planner Agent重构
+
+### Agent架构升级
+
+之前版本：
+
+用户输入
+↓
+简单判断是否调用工具
+↓
+执行工具
+↓
+生成答案
+
+
+当前版本：
+
+用户输入
+↓
+Agent Planner
+↓
+生成Action
+↓
+Tool Registry查找工具
+↓
+Tool Executor执行
+↓
+Observation返回
+↓
+LLM生成最终答案
+
+#### 1. AgentAction结构化输出
+
+新增AgentAction模型，用Pydantic约束LLM决策结果。
+
+
+LLM不再直接生成回答，而是输出：
+
+{
+    "action":"tool",
+    "tool":"get_weather",
+    "arguments":{
+        "city":"成都"
+    }
+}
+
+
+程序通过AgentAction解析后执行对应操作。
+
+
+#### 2. Tool Registry动态管理工具
+
+之前：
+
+Agent代码中直接调用具体工具。
+
+
+现在：
+
+agent.py通过registry.py统一管理工具：
+
+TOOLS
+ |
+ |-- get_weather
+ |
+ |-- search_attractions
+
+
+每个工具包含：
+
+- 工具名称
+- 功能描述
+- 参数定义
+- 执行函数
+
+
+新增工具时只需要修改registry，不需要修改Agent核心逻辑。
+
+
+#### 3. Planner和Executor分离
+
+当前Agent流程：
 
 decide_action()
+负责：
+- 理解用户需求
+- 决定下一步Action
 
-↓
-
-llm.py
-
-chat_raw()
-
-↓
-
-DeepSeek
-
-返回Action JSON
-
-↓
-
-agent.py
 
 execute_tool()
+负责：
+- 根据Action中的tool字段查找工具
+- 执行对应函数
+- 返回Observation
 
-↓
 
-tools/registry.py
+实现了LLM决策和程序执行的职责分离。
 
-找到工具
 
-↓
+### 当前Agent能力
 
-tools/weather.py
+目前支持：
 
-执行天气查询
+- 信息不足判断
+- 天气查询Tool
+- 景点查询Tool
+- 根据Tool结果生成旅行方案
 
-↓
 
-agent.py
+当前限制：
 
-生成Observation
+- 一次只能调用一个Tool
+- 没有循环Agent Loop
+- 没有Memory
+- Tool Calling基于Prompt实现
 
-↓
 
-agent.py
+后续计划：
 
-final_prompt
-
-↓
-
-llm.py
-
-chat_with_llm()
-
-↓
-
-DeepSeek
-
-返回旅行JSON
-
-↓
-
-models.py
-
-TravelPlan校验
-
-↓
-
-FastAPI返回
+- 多Tool连续调用
+- ReAct循环
+- RAG知识库
+- Memory机制
