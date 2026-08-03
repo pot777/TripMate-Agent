@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel,Field
 from typing import List
 
 
@@ -21,8 +21,27 @@ class BudgetBreakdown(BaseModel):
 
 class TravelPlan(BaseModel):
     destination: str
-    days: int
-    budget: int
+    days: int = Field(
+        gt=0,
+        description="旅行天数，必须大于0"
+    )
+    budget: int = Field(
+        gt=0,
+        description="旅行预算，必须大于0"
+    )
     schedule: List[ScheduleItem]
     food: List[str]
     budget_breakdown: BudgetBreakdown
+
+
+class AgentAction(BaseModel):
+
+    action: str
+
+    tool: str | None = None
+
+    arguments: dict = {}
+
+    answer: str | None = None
+
+    message: str | None = None
