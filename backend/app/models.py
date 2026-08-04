@@ -1,3 +1,4 @@
+# models.py
 from pydantic import BaseModel,Field
 from typing import List
 
@@ -34,14 +35,16 @@ class TravelPlan(BaseModel):
     budget_breakdown: BudgetBreakdown
 
 
+from typing import Literal
+
 class AgentAction(BaseModel):
-
-    action: str
-
+    action: Literal[
+        "tool",
+        "need_information",
+        "final",
+        "generate_plan"
+    ]
     tool: str | None = None
-
     arguments: dict = {}
-
     answer: str | None = None
-
     message: str | None = None
