@@ -105,7 +105,7 @@ LangChain等框架提供了成熟的Agent抽象，但为了理解Agent底层机�
 
 我采用LLM负责非确定性决策，代码负责确定性执行。LLM负责理解用户意图、决定是否调用工具以及生成规划方案；代码负责API调用、工具执行、数据校验和流程控制。这样可以降低幻觉风险，同时保证系统可靠性
 
-## Q0-11:## Q: 你的Tool Calling是如何实现的？
+## Q0-11:你的Tool Calling是如何实现的？
 
 回答：
 
@@ -123,6 +123,25 @@ Agent首先根据用户需求生成结构化Action，
 执行后将结果作为Observation返回LLM。
 
 这种设计实现了LLM决策和程序执行的解耦。
+
+## Q0-12：为什么Observation很重要？
+
+Tool执行结果不会直接返回给用户。
+
+Observation表示Agent获得了新的环境信息。
+
+Planner根据Observation重新规划下一步Action。
+
+没有Observation，
+
+Agent无法完成真正的多步任务。
+
+## Q0-13：
+Planner负责决策,TravelPlan属于业务对象。
+因此我将Agent决策和业务对象生成拆分。
+Planner负责：决定什么时候生成。
+chat_with_llm负责：输出符合Pydantic约束的TravelPlan。
+这样职责更加清晰，也方便以后扩展不同输出类型。
 
 ## Q1：为什么LLM可以生成文本？
 面试高频追问序列

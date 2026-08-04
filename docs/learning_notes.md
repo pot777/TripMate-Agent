@@ -98,12 +98,7 @@ Observation
 LLM继续决策
 
 当前版本：LLM Application + Tool模块
-未来升级：完整Agent
-增加：
-- Function Calling
-- Tool Router
-- Agent Loop
-- External API
+
 
 ## Day4 - 当前调用链
 main.py
@@ -146,42 +141,6 @@ models.py
 TravelPlan校验
 ↓
 FastAPI返回
-
-### ReAct Agent实践
-
-传统LLM应用：
-用户输入
-↓
-LLM
-↓
-答案
-
-Agent：
-用户目标
-↓
-LLM Planner
-↓
-生成Action
-↓
-Tool执行
-↓
-Observation
-↓
-LLM整合结果
-↓
-Final Answer
-
-
-在TripMate-Agent中：
-
-1. decide_action()
-负责让LLM决定是否调用工具
-2. registry.py
-维护工具名称和函数映射
-3. execute_tool()
-负责执行工具
-4. chat_with_llm()
-负责最终结构化生成
 
 
 ## Day5 - Planner Agent重构
@@ -283,27 +242,89 @@ execute_tool()
 实现了LLM决策和程序执行的职责分离。
 
 
-### 当前Agent能力
+## Day6 - Multi-Step Agent
 
-目前支持：
+### Agent Loop升级
 
-- 信息不足判断
-- 天气查询Tool
-- 景点查询Tool
-- 根据Tool结果生成旅行方案
+之前：
+
+User
+↓
+Planner
+↓
+Tool
+↓
+Final
+
+现在：
+
+User
+↓
+Planner
+↓
+Tool
+↓
+Observation
+↓
+Planner
+↓
+Tool
+↓
+Observation
+↓
+Generate Plan
+↓
+TravelPlan
 
 
-当前限制：
+### Observation
 
-- 一次只能调用一个Tool
-- 没有循环Agent Loop
-- 没有Memory
-- Tool Calling基于Prompt实现
+Tool执行结果不会直接返回用户。
+
+而是作为Observation加入上下文：
+
+current_message
++
+Tool Observation
+
+Planner根据Observation继续决定下一步Action。
 
 
-后续计划：
+### generate_plan
 
-- 多Tool连续调用
-- ReAct循环
-- RAG知识库
-- Memory机制
+Planner负责决策。
+
+TravelPlan属于业务对象。
+
+因此新增：
+
+generate_plan
+
+Planner负责：
+
+什么时候生成旅行方案。
+
+chat_with_llm负责：
+
+生成符合Pydantic的TravelPlan。
+
+实现了：
+
+决策
+
+与
+
+业务对象生成
+
+职责分离。
+
+
+### MAX_STEPS
+
+Agent Loop增加：
+
+MAX_STEPS
+
+用于限制Agent最大执行次数。
+
+避免LLM重复调用工具导致无限循环。
