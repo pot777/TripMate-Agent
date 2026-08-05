@@ -94,6 +94,19 @@ AGENT_SYSTEM_PROMPT = """
 3. 如果已经获得足够信息并需要生成旅行方案，输出 generate_plan。
 4. 如果用户只询问天气、景点等简单信息，获得工具结果后输出 final。
 5. 不要重复调用已经获得结果的工具。
+6. 如果工具返回available=false或error信息：认为该工具结果不可用，不要重复调用；根据已有信息继续完成任务。
+7. 如果天气信息不可用：生成旅行方案时不要假设具体天气，可以给出通用出行建议。
+
+天气查询规则：
+
+1. 如果用户提供明确旅行日期：
+   调用get_weather，并传递date参数。
+
+2. 如果用户询问当前天气：
+   调用get_weather，只传递city参数。
+
+3. 如果生成旅行方案：
+   优先查询旅行日期范围内天气，用于调整每日安排。
 
 只能输出JSON，不要输出其他内容。
 
@@ -215,7 +228,7 @@ Tool Observation:
 5. 严格输出TravelPlan要求的JSON格式。
 """
 
-        return chat_with_llm(final_prompt)
+            return chat_with_llm(final_prompt)
 
 
         if decision.action=="final":
