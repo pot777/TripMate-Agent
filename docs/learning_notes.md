@@ -328,3 +328,78 @@ MAX_STEPS
 用于限制Agent最大执行次数。
 
 避免LLM重复调用工具导致无限循环。
+
+
+## Day7 - 天气API接入与Memory升级
+
+
+### 1. 天气API接入
+
+天气工具从模拟数据升级为高德天气API，实现真实天气查询。
+
+当前支持：
+- 当前天气查询
+- 指定日期天气查询（受高德未来天气预测范围限制）
+
+遇到的问题：
+- 旧API Key类型不匹配，返回USERKEY_PLAT_NOMATCH，更换Web服务Key解决。
+- Git Bash和PowerShell Python环境不同，通过虚拟环境检查解释器解决。
+
+
+### 2. Conversation Memory实现
+
+新增Session Memory模块，通过session_id保存多轮对话。
+
+Memory保存：
+- user消息
+- tool结果
+- assistant回复
+
+实现后Agent可以理解连续任务，例如用户先询问成都天气，再询问游玩5天，Agent可以结合历史上下文理解用户需求。
+
+
+### 3. Task State Memory实现
+
+新增TravelState保存结构化旅行状态：
+
+{
+destination,
+days,
+budget,
+start_date,
+weather
+}
+
+增加State Extractor，从用户输入中提取旅行信息并更新状态。
+
+例如：
+
+“我想去成都玩5天”
+
+更新：
+
+{
+destination:"成都",
+days:5
+}
+
+同时发现State更新需要采用merge策略，避免LLM返回None覆盖已有信息。
+
+
+### 4. 当前问题
+
+1. 日期标准化
+
+用户输入“明天出发”“下周一出发”等自然语言日期，需要转换为天气API支持的标准日期格式。
+
+
+2. 天气查询策略
+
+旅行通常提前规划，而天气API只能预测未来有限日期。
+
+后续需要根据出发日期判断是否调用天气API，较远日期则提供通用建议。
+
+
+3. Memory持久化
+
+当前Memory基于Python dict，仅适合Demo，后续可升级SQLite/Redis等持久化方案。
