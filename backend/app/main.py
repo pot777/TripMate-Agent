@@ -12,12 +12,10 @@ def root():
         "message": "TripMate Agent Backend Running"
     }
 
-from app.llm import chat_with_llm
-
 @app.get("/chat")
-def chat(message: str):
+def chat(message: str,session_id: str = "default"):
 
-    answer = run_agent(message)
+    answer = run_agent(message,session_id)
 
     return {
         "user": message,

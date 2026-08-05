@@ -4,7 +4,15 @@ from .tools.registry import TOOLS
 import json
 from .models import AgentAction
 MAX_STEPS = 5
-
+from .memory.store import (
+    add_message,
+    get_history
+)
+from .memory.extractor import extract_state
+from .memory.state import (
+    get_state,
+    update_state
+)
 
 def build_tool_description():
 
@@ -159,10 +167,34 @@ def execute_tool(tool_name, arguments):
         }
 
 
-def run_agent(message):
+def run_agent(message,session_id="default"):
+    
+    add_message(session_id,"user",message)
 
-    current_message = message
+    extracted = extract_state(message)
 
+    update_state(session_id,**extracted)
+
+    history = get_history(session_id)
+    # print("Memory:")
+    # print(history)
+    state = get_state(session_id)
+    print("State:")
+    print(state)
+
+    current_message = f"""
+
+当前旅行状态：
+
+{state}
+
+
+历史对话：
+
+{history}
+
+
+"""
 
     for step in range(MAX_STEPS):
 
@@ -181,10 +213,14 @@ def run_agent(message):
 
         if decision.action=="need_information":
 
-            return {
+            answer = {
                 "status":"need_information",
                 "message":decision.message
             }
+
+            add_message(session_id,"assistant",str(answer))
+
+            return answer
 
 
         if decision.action=="tool":
@@ -194,10 +230,10 @@ def run_agent(message):
                 decision.arguments
             )
 
+            add_message(session_id,"tool",str(tool_result))
 
             print("Tool Observation:")
             print(tool_result)
-
 
             current_message += f"""
 
@@ -228,15 +264,25 @@ Tool Observation:
 5. 严格输出TravelPlan要求的JSON格式。
 """
 
-            return chat_with_llm(final_prompt)
+            answer = chat_with_llm(final_prompt)
+
+            add_message(session_id,"assistant",str(answer))
+
+            return answer
 
 
         if decision.action=="final":
 
+            add_message(session_id,"assistant",decision.answer)
+
             return decision.answer
 
 
-    return {
+    answer={
         "status":"error",
         "message":"Agent reached maximum steps"
     }
+
+    add_message(session_id,"assistant",str(answer))
+
+    return answer

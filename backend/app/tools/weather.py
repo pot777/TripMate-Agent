@@ -24,7 +24,7 @@ def get_weather(city:str,date=None):
         )
 
         data=response.json()
-        print(data)
+        # print(data)
 
 
         if data["status"]!="1":
