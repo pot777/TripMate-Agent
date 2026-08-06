@@ -403,3 +403,51 @@ days:5
 3. Memory持久化
 
 当前Memory基于Python dict，仅适合Demo，后续可升级SQLite/Redis等持久化方案。
+
+
+## Day8 - State Memory完善与输入规范化
+
+### 1. State Memory接入
+
+之前Agent主要依靠Conversation Memory理解上下文，需要从历史对话中推理旅行状态。
+
+新增Task State Memory，通过extract_state()提取用户输入中的关键信息，并使用update_state()维护结构化旅行状态。
+
+当前状态包含：
+- destination
+- days
+- budget
+- start_date
+
+Agent决策时同时读取Conversation Memory和State Memory，提高多轮任务稳定性。
+
+
+### 2. 日期标准化
+
+用户输入中的日期通常是自然语言表达，无法直接传递给天气API。
+
+增加日期规范化模块，将自然语言日期转换为标准YYYY-MM-DD格式。
+
+支持：
+- 今天、明天、后天
+- 下周/下下周
+- 下个月X号
+- X月X号
+
+同时避免LLM直接进行日期计算，将确定性转换逻辑交给代码处理。
+
+
+### 3. 天气Tool优化
+
+天气工具增加日期范围校验。
+
+调用天气API前判断目标日期是否在未来4天预测范围内。
+
+如果天气不可用，Tool返回available=false，Agent根据Observation继续执行任务。
+
+
+### 4. 当前优化方向
+
+当前天气查询由Tool内部判断日期有效性。
+
+后续可以考虑让Planner提前判断是否需要调用天气工具，减少无效Tool调用。
