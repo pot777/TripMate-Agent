@@ -1,10 +1,22 @@
+# weather.py
 import requests
 
 from ..config import AMAP_API_KEY
-
+from ..utils.date_parser import can_query_weather
 
 
 def get_weather(city:str,date=None):
+
+    # 未来天气查询范围判断
+
+    if date and not can_query_weather(date):
+
+        return {
+            "city": city,
+            "date": date,
+            "available": False,
+            "message": "距离出发日期过远，无法获取准确天气"
+        }
 
     url = "https://restapi.amap.com/v3/weather/weatherInfo"
 
@@ -41,6 +53,7 @@ def get_weather(city:str,date=None):
             return {
                 "city": weather["city"],
                 "date": "today",
+                "available": True,
                 "weather": weather["weather"],
                 "temperature": weather["temperature"]+"℃",
                 "wind": weather["winddirection"],
@@ -60,6 +73,7 @@ def get_weather(city:str,date=None):
                 return {
                     "city": city,
                     "date": date,
+                    "available": True,
                     "weather_day": forecast["dayweather"],
                     "weather_night": forecast["nightweather"],
                     "temperature_day": forecast["daytemp"]+"℃",
@@ -71,7 +85,7 @@ def get_weather(city:str,date=None):
             "city": city,
             "date": date,
             "available": False,
-            "message": "高德天气仅支持未来4天预测"
+            "message": "未查询到该日期天气信息"
         }
 
 

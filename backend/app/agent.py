@@ -13,6 +13,7 @@ from .memory.state import (
     get_state,
     update_state
 )
+from .utils.date_parser import normalize_date
 
 def build_tool_description():
 
@@ -172,6 +173,11 @@ def run_agent(message,session_id="default"):
     add_message(session_id,"user",message)
 
     extracted = extract_state(message)
+
+    # if extracted.get("start_date"):
+    #     extracted["start_date"] = normalize_date(
+    #         extracted["start_date"]
+    #     )
 
     update_state(session_id,**extracted)
 

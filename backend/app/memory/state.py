@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-
+from ..utils.date_parser import normalize_date
 
 class TravelState(BaseModel):
 
@@ -32,8 +32,10 @@ def update_state(session_id, **kwargs):
 
     for key,value in kwargs.items():
 
-        if hasattr(state,key) and value is not None:
+        if key == "start_date" and value:
+            value = normalize_date(value)
 
+        if hasattr(state,key) and value is not None:
             setattr(state,key,value)
 
     return state
