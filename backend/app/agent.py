@@ -3,7 +3,7 @@ from .llm import chat_with_llm, chat_raw
 from .tools.registry import TOOLS
 import json
 from .models import AgentAction
-MAX_STEPS = 5
+MAX_STEPS = 10
 from .memory.store import (
     add_message,
     get_history
