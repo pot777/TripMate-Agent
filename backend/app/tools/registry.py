@@ -1,6 +1,7 @@
 # registry.py
 from .weather import get_weather
 from .attraction import search_attractions
+from .rag import retrieve_travel_info
 
 
 TOOLS = {
@@ -24,6 +25,25 @@ TOOLS = {
             "city":"string"
         },
         "function":search_attractions
+    },
+
+    "retrieve_travel_info": {
+
+        "description":
+        """
+        查询旅游知识库。
+        用于获取景点介绍、
+        适合人群、
+        游玩强度、
+        旅游建议等静态旅游信息。
+        """,
+
+        "parameters":{
+            "city":"string",
+            "query":"string"
+        },
+
+        "function":retrieve_travel_info
     }
 
 }

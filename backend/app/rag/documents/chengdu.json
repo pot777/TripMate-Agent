@@ -1,0 +1,62 @@
+[
+  {
+    "name": "青城山",
+    "city": "成都",
+    "type": "自然景区",
+    "intensity": "中等",
+    "suitable_for": [
+      "老人",
+      "家庭"
+    ],
+    "duration": "4小时",
+    "tips": "建议上午游览，夏季注意防晒"
+  },
+  {
+    "name": "宽窄巷子",
+    "city": "成都",
+    "type": "历史文化",
+    "intensity": "低",
+    "suitable_for": [
+      "老人",
+      "情侣"
+    ],
+    "duration": "2小时",
+    "tips": "适合下午和晚上游览"
+  },
+  {
+    "name": "武侯祠",
+    "city": "成都",
+    "type": "历史文化",
+    "intensity": "低",
+    "suitable_for": [
+      "老人",
+      "亲子"
+    ],
+    "duration": "2小时",
+    "tips": "可以结合锦里游览"
+  },
+  {
+    "name": "都江堰",
+    "city": "成都",
+    "type": "历史文化",
+    "intensity": "中等",
+    "suitable_for": [
+      "家庭",
+      "老人"
+    ],
+    "duration": "半天",
+    "tips": "建议提前安排交通"
+  },
+  {
+    "name": "大熊猫基地",
+    "city": "成都",
+    "type": "动物",
+    "intensity": "低",
+    "suitable_for": [
+      "亲子",
+      "家庭"
+    ],
+    "duration": "3小时",
+    "tips": "建议上午前往"
+  }
+]
