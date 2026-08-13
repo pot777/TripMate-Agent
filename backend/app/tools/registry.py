@@ -2,6 +2,7 @@
 from .weather import get_weather
 from .attraction import search_attractions
 from .rag import retrieve_travel_info
+from .web_search import search_web
 
 
 TOOLS = {
@@ -44,6 +45,28 @@ TOOLS = {
         },
 
         "function":retrieve_travel_info
+    },
+
+    "search_web": {
+        "description":
+        """
+        查询互联网中的最新或知识库未覆盖的旅游信息。
+
+        当 retrieve_travel_info 返回 available=false，
+        或用户询问知识库中不存在的城市、景点、活动等信息时使用。
+
+        适合查询：
+        - 冷门城市旅游信息
+        - 最新景点信息
+        - 临时活动
+        - 知识库未覆盖的旅游知识
+        """,
+
+        "parameters": {
+            "query": "string"
+        },
+
+        "function": search_web
     }
 
 }

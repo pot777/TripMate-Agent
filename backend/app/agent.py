@@ -102,10 +102,11 @@ AGENT_SYSTEM_PROMPT = """
 2. 如果缺少完成任务所需的外部信息，输出 tool。
 3. 如果已经获得足够信息并需要生成旅行方案，输出 generate_plan。
 4. 如果用户只询问天气、景点等简单信息，获得工具结果后输出 final。
-5. 不要重复调用已经获得结果的工具。
-6. 如果工具返回available=false或error信息：认为该工具结果不可用，不要重复调用；根据已有信息继续完成任务。
-7. 如果天气信息不可用：生成旅行方案时不要假设具体天气，可以给出通用出行建议。
-8. 如果需要景点推荐、旅游经验、适合人群、游玩建议等静态旅游知识：调用retrieve_travel_info。
+5. 不要使用相同参数重复调用已经获得结果的工具。
+6. 如果工具返回error信息：认为该工具执行失败，不要重复调用相同工具；根据当前任务判断是否可以调用其他工具继续完成任务。
+7. 如果retrieve_travel_info返回available=false：表示当前RAG知识库没有足够相关的信息。此时不要再次调用retrieve_travel_info，应调用search_web作为fallback查询外部旅游信息。
+8. 如果search_web返回available=false：表示外部搜索也没有获得有效信息，不要重复搜索；根据已有信息继续回答或生成旅行方案。
+9. 如果天气信息不可用：生成旅行方案时不要假设具体天气，可以给出通用出行建议。
 
 天气查询规则：
 
@@ -205,9 +206,9 @@ def run_agent(message,session_id="default"):
 
     for step in range(MAX_STEPS):
 
-        print("================")
+        # print("================")
         print(f"Agent Step {step+1}")
-        print("================")
+        # print("================")
 
 
         decision = decide_action(current_message)

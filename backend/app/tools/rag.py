@@ -6,16 +6,15 @@ def retrieve_travel_info(
     query: str
 ):
 
-    results = search(query)
+    result = search(
+        query=query,
+        city=city
+    )
 
-
-    documents = results.get(
-        "documents",
-        [[]]
-    )[0]
-
-
+    
     return {
         "city": city,
-        "knowledge": documents
+        "available": result["found"],
+        "knowledge": result["knowledge"],
+        "best_distance": result["best_distance"]
     }
