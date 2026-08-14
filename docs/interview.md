@@ -148,6 +148,14 @@ State Memory则负责结构化保存任务中的关键信息，例如旅行目�
 
 这种设计能够减少 Agent 对 Prompt 稳定性的依赖，使执行流程更加可控。
 
+## P18：为什么将原来的手写 Agent 循环迁移到 LangGraph？
+原有 Agent 已经具备 Planner、Tool Calling、RAG、Web Search 和 Memory 等能力，但执行流程主要集中在 run_agent() 的 for + if + continue 结构中。随着工具数量和 Action 分支增加，流程控制、状态维护和异常处理会越来越复杂。因此我没有重写已有业务能力，而是引入 LangGraph，将 Planner、Tool、计划生成、信息补充和直接回答拆成不同 Node，通过 Edge 和 Conditional Edge 显式描述执行流程，使 Agent Runtime 更容易扩展和维护。
+
+## P19：你的 LangGraph 工作流是怎么设计的？
+我使用 AgentState 保存一次 Graph 执行过程中的运行时状态。Graph 从 planner 开始，由 LLM 输出 AgentAction，再通过 conditional edge 根据 action 分流：tool 进入工具节点，执行完成后携带 Observation 回到 planner；need_information 直接返回需要补充的信息；direct_answer 用于天气等简单问答；generate_plan 根据已经获得的用户状态和工具信息生成结构化 TravelPlan。这样形成了 planner → tool → planner 的 Agent 循环，同时让不同结束路径保持清晰。
+
+## P20：LangGraph 的 State 和项目原来的 Memory 有什么区别？
+项目中的 TravelState 属于业务状态，用于保存用户跨轮对话中的 destination、days、budget、travelers、preferences 等旅行需求；LangGraph 的 AgentState 属于运行时状态，用于保存 decision、tool_result、executed_calls、step_count 等一次 Agent 执行过程中的信息。目前我没有为了使用 LangGraph 强行替换原有 Memory，而是让 runner 将业务状态组装成 Graph 输入，由 Graph 负责本轮工作流执行。这样两个状态层职责更加明确。
 
 # Part 2：AI基础知识（LLM / Agent）
 
@@ -396,3 +404,52 @@ ReAct的优势是让模型能够结合外部环境反馈动态调整，而不是
 硬约束则由程序运行时直接保证。例如限制Agent最大执行步数、校验Tool参数、阻止完全重复的Tool Call，或者在某项任务已经完成后禁止再次执行。
 
 因此实际Agent系统通常需要结合两者：LLM负责需要语义理解和动态判断的部分，Runtime负责必须严格满足的执行约束。这样既保留Agent的灵活性，又提高系统的可控性和稳定性。
+
+
+## K6：LangGraph是什么？为什么Agent需要工作流编排？
+
+### 核心：
+
+LangGraph是一个用于构建有状态Agent工作流的图编排框架。它并不是用来替代LLM、RAG、Tool Calling或者Memory，而是负责组织这些模块之间的执行流程。
+
+一个Agent通常不是简单地调用一次LLM就结束，而是可能经历“判断下一步 → 调用工具 → 获得结果 → 再次判断 → 继续调用工具或生成答案”的多步过程。如果完全通过for循环和大量if/else手动控制，随着工具、状态和异常分支增加，流程会越来越难维护。
+
+LangGraph将Agent执行过程表示成图，其中Node表示具体的处理步骤，Edge表示步骤之间的执行关系，State保存整个工作流执行过程中共享的数据。通过这种方式，可以把Agent的控制流显式表达出来，使复杂的多步骤Agent更容易扩展、调试和维护。
+
+#### 追问1：LangGraph中的Node、Edge和State分别是什么？
+
+Node表示工作流中的一个处理步骤，本质上可以理解为一个接收当前State并返回状态更新的函数。例如Planner、Tool执行、生成最终答案都可以分别设计成Node。
+
+Edge表示Node之间的执行关系。普通Edge表示固定跳转，例如Tool执行完成后重新进入Planner；Conditional Edge则可以根据当前State动态决定下一步，例如Planner输出tool时进入Tool Node，输出generate_plan时进入计划生成Node。
+
+State是整个Graph执行过程中共享的数据载体，用于保存不同Node需要共同访问的信息，例如当前决策、Tool Observation、已经执行过的工具以及最终答案。不同Node不需要直接互相调用，而是通过读取和更新State进行协作。
+
+#### 追问2：为什么Agent中经常存在Planner → Tool → Planner的循环？
+
+因为Tool主要负责执行具体的外部能力，例如查询天气、检索RAG或者搜索Web，但Tool本身通常不负责判断整个用户任务是否已经完成。
+
+Planner首先根据用户需求决定调用哪个Tool；Tool执行后产生Observation；然后将Observation重新交给Planner，由Planner判断当前信息是否已经足够。
+
+如果还缺信息，可以继续调用其他Tool；如果信息已经足够，可以生成最终结果；如果缺少用户输入，也可以进入信息补充流程。
+
+因此Agent通常形成“决策 → 行动 → 观察 → 再决策”的循环，而不是简单执行一次LLM调用。
+
+#### 追问3：LangGraph和普通的if/else工作流有什么区别？
+
+从能力上来说，简单Agent完全可以使用for循环和if/else实现，LangGraph并不是实现Agent的必要条件。
+
+区别主要在工程组织方式。当Agent规模较小时，手写循环更加直接；但随着Node、Tool、状态、异常处理和分支不断增加，所有控制逻辑集中在一个函数中会逐渐难以维护。
+
+LangGraph把这些流程显式建模为Node、Edge和State，使控制流和业务逻辑分离。例如Planner只负责决策，Tool Node只负责工具执行，而Graph负责决定它们之间如何跳转。
+
+因此LangGraph的价值主要体现在复杂Agent的工作流编排、状态管理和可扩展性，而不是让LLM本身变得更智能。
+
+#### 追问4：Graph State和Conversation Memory有什么区别？
+
+Graph State主要描述一次工作流执行过程中的运行状态，例如当前Planner决策、Tool返回结果、已经执行过哪些Tool以及最终输出。
+
+Conversation Memory主要保存跨轮对话需要持续保留的用户信息和历史上下文，例如用户之前已经提供的旅行目的地、预算和偏好。
+
+两者生命周期和职责不同。Graph State更偏向Workflow Runtime，而Conversation Memory更偏向跨轮业务状态。
+
+实际Agent系统中两者可以结合使用：先从Memory恢复用户长期或跨轮状态，再将当前任务需要的信息放入Graph State，由Graph完成这一轮工作流执行。

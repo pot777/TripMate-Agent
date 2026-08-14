@@ -460,7 +460,7 @@ Web Search 中文检索能力优化：当前 Web Search fallback 暂时使用 Ta
 TODO：评估中文 Web Search Provider，必要时替换 Tavily；
 保持 search_web() 输入输出接口不变，避免影响 Agent 层。
 
-## day16 - 个性化
+## day16 - 个性化检索与 LangGraph 重构
 
 TODO：未来将 search_attractions 升级为基于 POI API / 结构化景点数据库的候选检索工具，再与 RAG 做 hybrid retrieval。
 
@@ -486,3 +486,47 @@ TODO:
 
 总结：
 Prompt 负责告诉 Agent “应该怎么做”，Runtime Guard 负责保证 Agent “不能违反关键执行约束”。对于工具去重、最大循环次数等确定性约束，不应完全依赖 LLM。
+
+### LangGraph Agent Runtime
+
+LangGraph 是什么：LangGraph 是面向有状态 Agent 工作流的图编排框架。它本身不负责替代 LLM、Tool、RAG 或 Memory，而是负责组织这些模块之间的执行流程。相比原先在 `run_agent()` 中通过 `for + if + continue` 手动控制 Agent 循环，LangGraph 将 Agent Runtime 显式表示为 Node、Edge 和 State。
+
+为什么引入 LangGraph：原有 Agent 已经具备 Planner、Tool Calling、RAG、Web Search、Memory 和计划生成能力，但所有流程控制都集中在 `run_agent()` 中。随着 Action 和异常分支增加，继续使用手写循环会导致控制逻辑越来越复杂。因此保留已有业务模块，只将 Agent 的流程编排层迁移到 LangGraph。
+
+Node：Node 表示工作流中的一个处理步骤，本质上是接收当前 Graph State 并返回部分状态更新的函数。当前项目主要包含：
+- `planner`：调用 LLM 判断下一步 Action；
+- `tool`：执行工具并保存 Observation；
+- `generate_plan`：根据用户状态和工具结果生成结构化 TravelPlan；
+- `direct_answer`：处理无需生成完整旅行计划的普通问答；
+- `need_information`：返回缺失信息提示。
+
+Edge：Edge 决定 Node 之间的执行方向。普通 Edge 表示固定跳转，例如 `tool -> planner`；Conditional Edge 根据当前 State 动态决定下一节点，例如 `planner` 根据 `AgentAction.action` 分流到 `tool`、`need_information`、`direct_answer` 或 `generate_plan`。
+
+Graph State：Graph State 是一次 Graph 执行过程中各 Node 共享的数据载体。当前使用 `AgentState(TypedDict)` 保存 `current_message`、`decision`、`tool_result`、`final_answer`、`executed_calls`、`travel_info_completed`、`step_count` 等运行时信息。Node 不需要手动互相调用，而是通过读取和更新 State 协作。
+
+Graph State 与 TravelState 的区别：`TravelState` 保存用户跨轮对话中的旅行需求，例如 destination、days、budget、start_date、travelers、preferences、interests；`AgentState` 保存一次 Agent Graph 执行过程中的运行时状态。前者属于业务 Memory，后者属于 Workflow Runtime State，两者职责不同。
+
+当前 Graph 主流程：
+
+START
+→ planner
+→ route_action
+→ tool → planner（循环）
+→ need_information → END
+→ direct_answer → END
+→ generate_plan → END
+
+为什么 tool 要回到 planner：工具只负责提供 Observation，并不能自行决定任务是否完成。执行 Tool 后将结果追加到 `current_message`，再返回 planner，由 LLM 根据新信息判断是否继续调用其他工具、直接回答或生成计划，从而形成 Agent 的 observe → reason → act 循环。
+
+为什么 generate_plan 和 direct_answer 分开：`generate_plan` 用于完整旅行规划，需要调用 `chat_with_llm()` 并按照 `TravelPlan` 输出结构化结果；`direct_answer` 用于天气等简单问题，Planner 已经产生最终自然语言回答，不需要再进行一次计划生成。原先名为 `final` 容易与 Graph 的 END 混淆，因此改名为 `direct_answer`。
+
+为什么 Node 后还需要 END：Node 表示“执行什么业务逻辑”，END 表示“Graph 执行到这里正式终止”。例如 `generate_plan` 负责生成结果，而 `generate_plan -> END` 表示生成完成后工作流结束。二者属于不同层次，不能简单视为同一个概念。
+
+迁移原则：没有重写已有 Tool、RAG、Memory 和 LLM 逻辑，而是将原有 `decide_action()`、`execute_tool()`、`build_tool_call_key()` 等能力保留在 `agent/core.py`，由 `graph.py` 负责工作流编排，`runner.py` 负责连接 FastAPI/Memory 与 Graph。最终目录职责为：
+- `agent/core.py`：Agent 基础能力与 Planner；
+- `agent/graph.py`：LangGraph Node、Edge、State 和 Graph；
+- `agent/runner.py`：Agent 对外运行入口。
+
+日期参数边界：在真实 Graph 测试中发现 Planner 可能直接向 `get_weather` 传入“明天”等自然语言日期，而 TravelState 中的日期标准化无法覆盖 Tool 参数。因此将日期标准化同时放到 Weather Tool 边界，使 `get_weather()` 自身能够处理自然语言日期。这个问题说明 Tool 应尽量具备稳定、明确的输入契约，而不能假设上游 LLM 一定传入完全规范化参数。
+
+当前尚未引入 LangGraph Checkpoint/Persistence。现阶段 Graph State 主要用于单次 Agent Runtime，跨轮用户旅行信息仍由项目原有 Memory/TravelState 管理。后续再根据实际需求决定是否使用 LangGraph Checkpointer 统一或增强状态持久化。
