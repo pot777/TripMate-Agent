@@ -18,7 +18,7 @@ LLM模型
 ↓
 返回结果
 
-## FastAPI作用
+### FastAPI作用
 
 FastAPI负责：
 
@@ -26,7 +26,7 @@ FastAPI负责：
 2. 调用业务逻辑
 3. 返回结果
 
-## 为什么使用Python
+### 为什么使用Python
 
 AI应用生态主要集中在Python：
 
@@ -35,7 +35,7 @@ AI应用生态主要集中在Python：
 - Transformers
 - OpenAI SDK
 
-# TripMate总体架构
+### TripMate总体架构
 
 用户
  |
@@ -451,3 +451,24 @@ Agent决策时同时读取Conversation Memory和State Memory，提高多轮任�
 当前天气查询由Tool内部判断日期有效性。
 
 后续可以考虑让Planner提前判断是否需要调用天气工具，减少无效Tool调用。
+
+
+## day14 - rag + web_search
+
+Web Search 中文检索能力优化：当前 Web Search fallback 暂时使用 Tavily API，能够满足 Agent 外部知识检索与 RAG fallback 的功能验证，但针对中国境内旅游场景，其中文互联网覆盖、来源质量及简繁体结果仍有进一步优化空间。当前通过统一 search_web() 接口隔离具体搜索服务，后续可根据实际检索效果替换或组合更适合中文旅游场景的 Search Provider，而无需修改 Agent 核心调用逻辑。
+
+TODO：评估中文 Web Search Provider，必要时替换 Tavily；
+保持 search_web() 输入输出接口不变，避免影响 Agent 层。
+
+## day16 - 个性化
+
+TODO：未来将 search_attractions 升级为基于 POI API / 结构化景点数据库的候选检索工具，再与 RAG 做 hybrid retrieval。
+
+TODO:
+当前自动知识扩充主要由 RAG miss 触发。
+
+后续优化：
+引入 knowledge sufficiency 判断，
+当已有知识虽然能够命中，但不足以覆盖用户当前需求时，
+仍允许触发 Web Search 进行增量知识扩充，
+避免单次扩库后知识长期停滞。
