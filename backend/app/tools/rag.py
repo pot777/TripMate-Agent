@@ -3,15 +3,15 @@ from ..rag.retriever import search
 
 def retrieve_travel_info(
     city: str,
-    query: str
+    query: str,
+    exclude_high_intensity: bool = False
 ):
-
     result = search(
         query=query,
-        city=city
+        city=city,
+        exclude_high_intensity=exclude_high_intensity
     )
 
-    
     return {
         "city": city,
         "available": result["found"],

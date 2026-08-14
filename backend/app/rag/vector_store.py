@@ -74,8 +74,11 @@ def build_vector_store():
 
         metadatas.append(
             {
-                "city":item["city"],
-                "name":item["name"]
+                "city": item["city"],
+                "name": item["name"],
+                "type": item["type"],
+                "intensity": item["intensity"],
+                "suitable_for": "、".join(item["suitable_for"])
             }
         )
 

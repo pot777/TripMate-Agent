@@ -102,22 +102,27 @@ AGENT_SYSTEM_PROMPT = """
 2. 如果缺少完成任务所需的外部信息，输出 tool。
 3. 如果已经获得足够信息并需要生成旅行方案，输出 generate_plan。
 4. 如果用户只询问天气、景点等简单信息，获得工具结果后输出 final。
-5. 不要使用相同参数重复调用已经获得结果的工具。
+5. 不要重复执行已经完成的工具任务。即使参数表述不同，只要目的和信息需求相同，也不要再次调用相同工具。
 6. 如果工具返回error信息：认为该工具执行失败，不要重复调用相同工具；根据当前任务判断是否可以调用其他工具继续完成任务。
-7. 如果retrieve_travel_info返回available=false：表示当前RAG知识库没有足够相关的信息。此时不要再次调用retrieve_travel_info，应调用search_web作为fallback查询外部旅游信息。
-8. 如果search_web返回available=false：表示外部搜索也没有获得有效信息，不要重复搜索；根据已有信息继续回答或生成旅行方案。
-9. 如果天气信息不可用：生成旅行方案时不要假设具体天气，可以给出通用出行建议。
+7. 如果retrieve_travel_info返回available=false：表示当前RAG知识库没有足够相关的信息。此时不要再次调用retrieve_travel_info，应调用search_web作为fallback查询外部旅游信息。调用 search_web 查询旅游信息时，必须同时传递目标城市 city 和搜索 query。
+8. 如果 retrieve_travel_info 已经返回 available=true，则认为旅游知识检索已完成，不要再次调用 retrieve_travel_info；应继续查询其他必要信息或生成旅行方案。
+9. 如果用户明确表示“不想太累、轻松、少走路”等低强度偏好，调用 retrieve_travel_info 时将 exclude_high_intensity 设置为 true。
+10. 如果search_web返回available=false：表示外部搜索也没有获得有效信息，不要重复搜索；根据已有信息继续回答或生成旅行方案。
+11. 如果天气信息不可用：生成旅行方案时不要假设具体天气，可以给出通用出行建议。
 
 天气查询规则：
 
-1. 如果用户提供明确旅行日期：
-   调用get_weather，并传递date参数。
+1. 如果用户提供明确旅行日期：调用get_weather，并传递date参数。
+2. 如果用户询问当前天气：调用get_weather，只传递city参数。
+3. 如果生成旅行方案：优先查询旅行日期范围内天气，用于调整每日安排。
 
-2. 如果用户询问当前天气：
-   调用get_weather，只传递city参数。
+个性化检索规则：
 
-3. 如果生成旅行方案：
-   优先查询旅行日期范围内天气，用于调整每日安排。
+1. 当前旅行状态中的 travelers、preferences、interests 属于用户个性化需求。
+2. 调用 retrieve_travel_info 时，应结合 destination、travelers、preferences、interests 生成具体的 query。
+3. 不要只使用城市名或“景点推荐”作为 query。
+4. 如果某个个性化字段为空，不要自行补充或猜测。
+5. 如果 RAG 查询失败并调用 search_web，Web Search 的 query 同样应保留这些用户偏好。
 
 只能输出JSON，不要输出其他内容。
 

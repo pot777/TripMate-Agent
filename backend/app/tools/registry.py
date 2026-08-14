@@ -1,6 +1,6 @@
 # registry.py
 from .weather import get_weather
-from .attraction import search_attractions
+# from .attraction import search_attractions
 from .rag import retrieve_travel_info
 from .web_search import search_web
 
@@ -20,13 +20,13 @@ TOOLS = {
         "function": get_weather
     },
 
-    "search_attractions": {
-        "description":"查询城市热门景点",
-        "parameters":{
-            "city":"string"
-        },
-        "function":search_attractions
-    },
+    # "search_attractions": {
+    #     "description":"查询城市热门景点",
+    #     "parameters":{
+    #         "city":"string"
+    #     },
+    #     "function":search_attractions
+    # },
 
     "retrieve_travel_info": {
 
@@ -41,7 +41,8 @@ TOOLS = {
 
         "parameters":{
             "city":"string",
-            "query":"string"
+            "query":"string",
+            "exclude_high_intensity": "optional boolean"
         },
 
         "function":retrieve_travel_info
@@ -50,7 +51,9 @@ TOOLS = {
     "search_web": {
         "description":
         """
-        查询互联网中的最新或知识库未覆盖的旅游信息。
+        当RAG知识库未覆盖目标城市或相关旅游知识时，
+        查询互联网信息作为fallback。
+        调用时必须同时传递city和query。
 
         当 retrieve_travel_info 返回 available=false，
         或用户询问知识库中不存在的城市、景点、活动等信息时使用。
@@ -63,6 +66,7 @@ TOOLS = {
         """,
 
         "parameters": {
+            "city": "string",
             "query": "string"
         },
 
