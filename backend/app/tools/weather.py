@@ -1,14 +1,21 @@
-# weather.py
+# tools/weather.py
 import requests
 
 from ..config import AMAP_API_KEY
-from ..utils.date_parser import can_query_weather
+from ..utils.date_parser import (
+    can_query_weather,
+    normalize_date
+)
 
 
-def get_weather(city:str,date=None):
+def get_weather(city: str, date=None):
+
+    # 如果传入了自然语言日期，例如“明天”“后天”，
+    # 先统一转换成 YYYY-MM-DD
+    if date:
+        date = normalize_date(date)
 
     # 未来天气查询范围判断
-
     if date and not can_query_weather(date):
 
         return {

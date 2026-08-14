@@ -41,7 +41,7 @@ class AgentAction(BaseModel):
     action: Literal[
         "tool",
         "need_information",
-        "final",
+        "direct_answer",
         "generate_plan"
     ]
     tool: str | None = None

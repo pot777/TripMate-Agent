@@ -1,5 +1,6 @@
 from fastapi import FastAPI
-from .agent import run_agent
+from .agent.runner import run_graph
+
 
 app = FastAPI(
     title="TripMate Agent API"
@@ -15,7 +16,7 @@ def root():
 @app.get("/chat")
 def chat(message: str,session_id: str = "default"):
 
-    answer = run_agent(message,session_id)
+    answer = run_graph(message, session_id)
 
     return {
         "user": message,
