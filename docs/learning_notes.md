@@ -472,3 +472,17 @@ TODO:
 当已有知识虽然能够命中，但不足以覆盖用户当前需求时，
 仍允许触发 Web Search 进行增量知识扩充，
 避免单次扩库后知识长期停滞。
+
+### Agent 工具调用去重
+
+问题：
+仅在 Prompt 中要求 Agent “不要重复调用工具”属于软约束，LLM 仍可能因为 query 表述变化而重复执行语义相同的工具任务，例如多次调用 retrieve_travel_info。
+
+改进：
+在 Agent Runtime 中增加工具调用状态控制：
+
+- executed_calls：记录本轮已经执行的具体工具调用，通过 tool name + arguments 生成唯一 key，阻止完全相同的工具调用重复执行。
+- completed_tasks：记录已经完成的信息获取任务。例如 retrieve_travel_info 返回 available=true 后，将 travel_info 标记为已完成，之后即使 LLM 使用不同 query 再次请求 RAG，也不再实际执行。
+
+总结：
+Prompt 负责告诉 Agent “应该怎么做”，Runtime Guard 负责保证 Agent “不能违反关键执行约束”。对于工具去重、最大循环次数等确定性约束，不应完全依赖 LLM。
