@@ -175,16 +175,22 @@ def execute_tool(tool_name, arguments):
         }
 
 
+def build_tool_call_key(tool_name, arguments):
+
+    arguments_json = json.dumps(
+        arguments,
+        sort_keys=True,
+        ensure_ascii=False
+    )
+
+    return f"{tool_name}:{arguments_json}"
+
+
 def run_agent(message,session_id="default"):
     
     add_message(session_id,"user",message)
 
     extracted = extract_state(message)
-
-    # if extracted.get("start_date"):
-    #     extracted["start_date"] = normalize_date(
-    #         extracted["start_date"]
-    #     )
 
     update_state(session_id,**extracted)
 
@@ -208,6 +214,13 @@ def run_agent(message,session_id="default"):
 
 
 """
+
+    completed_tasks = {
+        "travel_info": False,
+        "web_search": False
+    }
+
+    executed_calls = set()
 
     for step in range(MAX_STEPS):
 
@@ -236,14 +249,55 @@ def run_agent(message,session_id="default"):
             return answer
 
 
-        if decision.action=="tool":
+        if decision.action == "tool":
 
-            tool_result = execute_tool(
+            tool_call_key = build_tool_call_key(
                 decision.tool,
                 decision.arguments
             )
 
-            add_message(session_id,"tool",str(tool_result))
+            # RAG 已经成功获得旅游知识，不允许重复检索
+            if (
+                decision.tool == "retrieve_travel_info"
+                and completed_tasks["travel_info"]
+            ):
+
+                tool_result = {
+                    "error": "travel_info_already_available",
+                    "message": "本轮已经获得有效旅游知识，请继续其他必要步骤或生成旅行方案。"
+                }
+
+            # 完全相同的工具调用不重复执行
+            elif tool_call_key in executed_calls:
+
+                tool_result = {
+                    "error": "duplicate_tool_call",
+                    "message": "该工具已使用相同参数执行过，请根据已有结果继续判断。"
+                }
+
+            else:
+
+                executed_calls.add(tool_call_key)
+
+                tool_result = execute_tool(
+                    decision.tool,
+                    decision.arguments
+                )
+
+                if (
+                    decision.tool == "retrieve_travel_info"
+                    and isinstance(tool_result, dict)
+                    and tool_result.get("available") is True
+                ):
+
+                    completed_tasks["travel_info"] = True
+
+
+            add_message(
+                session_id,
+                "tool",
+                str(tool_result)
+            )
 
             print("Tool Observation:")
             print(tool_result)
@@ -257,8 +311,6 @@ Tool Observation:
 请根据以上Observation继续判断下一步。
 
 """
-
-
             continue
 
 
