@@ -100,14 +100,29 @@ AGENT_SYSTEM_PROMPT = """
 
 天气查询规则：
 
-1. 如果用户提供明确旅行日期：调用get_weather，并传递date参数。
-2. 如果用户询问当前天气：调用get_weather，只传递city参数。
-3. 如果生成旅行方案：优先查询旅行日期范围内天气，用于调整每日安排。
+1. 如果用户询问某个城市天气，并且包含以下任意日期表达：今天、明天、后天、昨天具体日期（例如2026-08-25），都认为日期信息明确，应直接调用get_weather。
+   例如：用户：哈尔滨明天天气怎么样
+   应输出：
+   {{
+     "action":"tool",
+     "tool":"get_weather",
+     "arguments":{{
+        "city":"哈尔滨",
+        "date":"明天"
+     }}
+   }}
+2. 如果用户询问天气但没有提供日期：
+   例如：
+   "哈尔滨天气怎么样"
+
+   调用get_weather，只传递city。
+3. 如果生成旅行方案：
+   优先查询旅行日期范围内天气，用于调整每日安排。
 
 个性化检索规则：
 
 1. 当前旅行状态中的 travelers、preferences、interests 属于用户个性化需求。
-2. 调用 retrieve_travel_info 时，应结合 destination、travelers、preferences、interests 生成具体的 query。
+2. 调用 retrieve_travel_info 时，应结合：destination、days、budget、travelers、preferences、interests生成query。
 3. 不要只使用城市名或“景点推荐”作为 query。
 4. 如果某个个性化字段为空，不要自行补充或猜测。
 5. 如果 RAG 查询失败并调用 search_web，Web Search 的 query 同样应保留这些用户偏好。

@@ -48,36 +48,34 @@ def run_graph(
     print("Travel State:")
     print(travel_state)
 
-    # 5. 构造 Planner 需要的上下文
-    current_message = f"""
-
-当前旅行状态：
-
-{travel_state}
-
-
-历史对话：
-
-{history}
-
-"""
-
-    # 6. 构造 LangGraph 初始状态
-    initial_state: AgentState = {
+    # 5. 构造 LangGraph 初始状态
+    initial_state = {
         "session_id": session_id,
-        "current_message": current_message,
-        "travel_info_completed": False,
+        "messages": [
+            {
+                "role": "user",
+                "content": message
+            }
+        ],
+        "travel_state": travel_state.model_dump(),
+        "observations": [],
         "executed_calls": [],
         "step_count": 0
     }
 
-    # 7. 启动 Graph
+    # 6. 启动 Graph
     result = graph.invoke(
         initial_state
     )
 
-    # 8. 所有结束路径都统一从 final_answer 取结果
-    answer = result["final_answer"]
+    # 7. 将Graph中的最新travel_state同步回Memory
+    update_state(
+        session_id,
+        **result["travel_state"]
+    )
+
+    # 8. 所有结束路径都统一从 answer 取结果
+    answer = result["answer"]
 
     # 9. 保存 Assistant 回复
     add_message(

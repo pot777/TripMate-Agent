@@ -12,7 +12,11 @@ class TravelState(BaseModel):
 
     start_date: str | None = None
 
-    weather: dict | None = None
+    weather: dict = Field(default_factory=dict)
+
+    travel_knowledge: list[str] = Field(default_factory=list)
+
+    current_plan: dict | None = None
 
     travelers: list[str] = Field(default_factory=list)
 

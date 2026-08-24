@@ -35,8 +35,35 @@ def extract_state(message):
 
     response = chat_raw(prompt)
 
-    # print("======STATE EXTRACT RAW======")
-    # print(response)
-    # print("============================")
+    print("======STATE EXTRACT RAW======")
+    print(response)
+    print("============================")
 
-    return json.loads(response)
+
+    try:
+
+        # 去除 Markdown JSON 包裹
+        if response.startswith("```"):
+
+            response = response.replace(
+                "```json",
+                ""
+            )
+
+            response = response.replace(
+                "```",
+                ""
+            )
+
+            response = response.strip()
+
+
+        return json.loads(response)
+
+
+    except Exception as e:
+
+        print("State Extract Parse Failed:")
+        print(e)
+
+        return {}
