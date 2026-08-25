@@ -42,7 +42,8 @@ class AgentAction(BaseModel):
         "tool",
         "need_information",
         "direct_answer",
-        "generate_plan"
+        "generate_plan",
+        "modify_plan"
     ]
     tool: str | None = None
     arguments: dict = {}

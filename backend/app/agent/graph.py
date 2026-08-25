@@ -151,6 +151,9 @@ def route_action(state: AgentState):
     if decision.action == "direct_answer":
         return "direct_answer"
 
+    if decision.action == "modify_plan":
+        return "modify_plan"
+
 
     raise ValueError(
         f"Unknown action: {decision.action}"
@@ -342,6 +345,96 @@ def generate_plan_node(state: AgentState):
     }
 
 
+def modify_plan_node(state: AgentState):
+
+    travel_state = state.get(
+        "travel_state",
+        {}
+    )
+
+
+    current_plan = travel_state.get(
+        "current_plan"
+    )
+
+
+    messages = state.get(
+        "messages",
+        []
+    )
+
+
+    context = "\n".join(
+        [
+            f"{m['role']}: {m['content']}"
+            for m in messages
+        ]
+    )
+
+
+    prompt = f"""
+
+你是一个旅行方案修改Agent。
+
+当前已经存在一个旅行方案。
+
+你的任务：
+根据用户最新修改要求，
+只修改必要部分。
+
+严格规则：
+
+1. 保留没有被用户提及的日期安排。
+
+2. 如果用户说“第一天”，只能修改day=1。
+
+3. 不允许改变：
+- 目的地
+- 天数
+- 用户预算
+
+4. 修改后的结果必须仍然符合TravelPlan JSON格式。
+
+
+当前旅行状态：
+
+{travel_state}
+
+
+已有旅行方案：
+
+{current_plan}
+
+
+用户对话：
+
+{context}
+
+
+请输出修改后的完整TravelPlan JSON。
+
+
+"""
+
+
+    answer = chat_with_llm(
+        prompt
+    )
+
+
+    print("Graph Modified Plan:")
+    print(answer)
+
+
+    return {
+        "answer": answer,
+        "travel_state": {
+            **travel_state,
+            "current_plan": answer.model_dump()
+        }
+    }
+
+
 def direct_answer_node(state: AgentState):
 
     decision = state["decision"]
@@ -449,6 +542,11 @@ builder.add_node(
 )
 
 builder.add_node(
+    "modify_plan",
+    modify_plan_node
+)
+
+builder.add_node(
     "direct_answer",
     direct_answer_node
 )
@@ -470,7 +568,8 @@ builder.add_conditional_edges(
         "tool": "tool",
         "need_information": "need_information",
         "direct_answer": "direct_answer",
-        "generate_plan": "generate_plan"
+        "generate_plan": "generate_plan",
+        "modify_plan": "modify_plan"
     }
 )
 
@@ -486,6 +585,11 @@ builder.add_edge(
 
 builder.add_edge(
     "generate_plan",
+    END
+)
+
+builder.add_edge(
+    "modify_plan",
     END
 )
 
