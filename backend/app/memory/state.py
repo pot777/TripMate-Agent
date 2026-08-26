@@ -1,4 +1,7 @@
 from pydantic import BaseModel, Field
+
+from ..db.database import SessionLocal
+from ..db.models import Conversation, TravelStateRecord, utc_now
 from ..utils.date_parser import normalize_date
 
 
@@ -25,52 +28,98 @@ class TravelState(BaseModel):
     interests: list[str] = Field(default_factory=list)
 
 
-states = {}
+def _get_or_create_records(db, session_id):
+    conversation = db.query(Conversation).get(session_id)
+
+    if conversation is None:
+        conversation = Conversation(id=session_id)
+        db.add(conversation)
+        db.flush()
+
+    state_record = db.query(TravelStateRecord).get(session_id)
+
+    if state_record is None:
+        state = TravelState()
+        state_record = TravelStateRecord(
+            conversation_id=session_id,
+            state_json=state.model_dump()
+        )
+        db.add(state_record)
+        db.flush()
+    else:
+        state = TravelState.model_validate(state_record.state_json)
+
+    return conversation, state_record, state
 
 
 def get_state(session_id):
+    db = SessionLocal()
 
-    if session_id not in states:
-
-        states[session_id] = TravelState()
-
-    return states[session_id]
+    try:
+        _, _, state = _get_or_create_records(db, session_id)
+        db.commit()
+        return state
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 
 def update_state(session_id, **kwargs):
+    db = SessionLocal()
 
-    state = get_state(session_id)
+    try:
+        conversation, state_record, state = _get_or_create_records(db, session_id)
 
-    for key, value in kwargs.items():
+        for key, value in kwargs.items():
 
-        if key == "start_date" and value:
-            value = normalize_date(value)
+            if key == "start_date" and value:
+                value = normalize_date(value)
 
-        if not hasattr(state, key) or value is None:
-            continue
+            if not hasattr(state, key) or value is None:
+                continue
 
-        if key in ["travelers", "preferences", "interests"]:
+            if key in ["travelers", "preferences", "interests"]:
 
-            current_value = getattr(state, key)
+                current_value = getattr(state, key)
 
-            merged_value = list(
-                dict.fromkeys(
-                    current_value + value
+                merged_value = list(
+                    dict.fromkeys(
+                        current_value + value
+                    )
                 )
-            )
 
-            setattr(
-                state,
-                key,
-                merged_value
-            )
+                setattr(
+                    state,
+                    key,
+                    merged_value
+                )
 
-        else:
+            else:
 
-            setattr(
-                state,
-                key,
-                value
-            )
+                setattr(
+                    state,
+                    key,
+                    value
+                )
 
-    return state
+        now = utc_now()
+        state_record.state_json = state.model_dump()
+        state_record.updated_at = now
+        conversation.updated_at = now
+
+        if state.current_plan:
+            destination = state.current_plan.get("destination") or state.destination
+            days = state.current_plan.get("days") or state.days
+
+            if destination:
+                conversation.title = f"{destination}{str(days) + '日' if days else ''}游"
+
+        db.commit()
+        return state
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()

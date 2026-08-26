@@ -5,10 +5,10 @@ import type { ItineraryItem } from '../types'
 const props = defineProps<{ item: ItineraryItem | null; nextDay: number }>()
 const emit = defineEmits<{ save: [item: ItineraryItem | Omit<ItineraryItem, 'id'>]; close: [] }>()
 
-const form = reactive({ day: 1, dateTime: '', location: '', content: '', transportation: '', budget: 0 })
+const form = reactive({ day: 1, dateTime: '', location: '', content: '', transportation: '', accommodationSuggestion: '', budget: 0 })
 
 watch(() => props.item, (item) => {
-  Object.assign(form, item || { day: props.nextDay, dateTime: `第 ${props.nextDay} 天`, location: '', content: '', transportation: '', budget: 0 })
+  Object.assign(form, item || { day: props.nextDay, dateTime: `第 ${props.nextDay} 天`, location: '', content: '', transportation: '', accommodationSuggestion: '', budget: 0 })
 }, { immediate: true })
 
 function save() {

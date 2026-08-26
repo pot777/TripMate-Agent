@@ -1,29 +1,40 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useTripStore } from '../stores/trip'
 
 const store = useTripStore()
-const recentMessages = computed(() => store.messages.filter((m) => m.role === 'user').slice(-5).reverse())
+
+function formatDate(value: string) {
+  const date = new Date(value)
+  const today = new Date()
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()
+  const targetDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+  const daysAgo = Math.round((startOfToday - targetDay) / 86400000)
+  if (daysAgo === 0) return '今天'
+  if (daysAgo === 1) return '昨天'
+  return `${date.getMonth() + 1}月${date.getDate()}日`
+}
 </script>
 
 <template>
   <aside class="sidebar">
-    <button class="new-chat" type="button" @click="store.newSession">＋ 新建旅行对话</button>
+    <button class="new-chat" type="button" @click="store.newConversation">＋ 新建旅行对话</button>
 
     <section class="side-section">
-      <div class="section-label"><span>最近对话</span><small>本地记录</small></div>
-      <div v-if="recentMessages.length" class="history-list">
-        <button v-for="message in recentMessages" :key="message.id" type="button" class="history-item">
-          <span>✦</span><span>{{ String(message.content) }}</span>
+      <div class="section-label"><span>最近旅行</span></div>
+      <div v-if="store.conversations.length" class="history-list">
+        <button
+          v-for="conversation in store.conversations"
+          :key="conversation.id"
+          type="button"
+          :class="['history-item', { active: conversation.id === store.activeConversationId }]"
+          @click="store.selectConversation(conversation.id)"
+        >
+          <span class="history-title">{{ conversation.title }}</span>
+          <span class="history-preview">{{ conversation.preview }}</span>
+          <time>{{ formatDate(conversation.updated_at) }}</time>
         </button>
       </div>
-      <div v-else class="side-empty">对话后将在这里显示历史记录</div>
-    </section>
-
-    <section class="session-card">
-      <div class="section-label"><span>当前 Session</span><i class="status-dot" /></div>
-      <strong>{{ store.sessionShortId }}</strong>
-      <small>完整 ID 已安全保存在本机</small>
+      <div v-else class="side-empty">开始规划后，旅行会显示在这里</div>
     </section>
 
     <section class="profile-card">

@@ -3,3 +3,6 @@
 __pycache__/
 *.pyc
 chroma_db
+backend/tripmate.db
+backend/tripmate.db-shm
+backend/tripmate.db-wal

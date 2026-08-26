@@ -1,5 +1,13 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import AppTabBar from './components/AppTabBar.vue'
+import { useTripStore } from './stores/trip'
+
+const store = useTripStore()
+
+onMounted(() => {
+  void store.initialize()
+})
 </script>
 
 <template>

@@ -48,6 +48,40 @@ export interface ChatMessage {
   createdAt: string
 }
 
+export interface Conversation {
+  id: string
+  title: string
+  created_at: string
+  updated_at: string
+  preview: string
+}
+
+export interface ApiMessage {
+  id: number
+  role: 'user' | 'assistant'
+  content: unknown
+  created_at: string
+}
+
+export interface TravelStateData {
+  destination: string | null
+  days: number | null
+  budget: number | null
+  start_date: string | null
+  weather: Record<string, unknown>
+  travel_knowledge: string[]
+  current_plan: TravelPlan | null
+  travelers: string[]
+  preferences: string[]
+  interests: string[]
+}
+
+export interface ConversationDetail extends Conversation {
+  messages: ApiMessage[]
+  travel_state: TravelStateData | null
+  current_plan: TravelPlan | null
+}
+
 export interface ItineraryItem {
   id: string
   day: number
@@ -55,7 +89,12 @@ export interface ItineraryItem {
   location: string
   content: string
   transportation: string
+  accommodationSuggestion: string
   budget: number
+}
+
+export interface PlanUpdateResponse {
+  current_plan: TravelPlan
 }
 
 export function isTravelPlan(value: AgentAnswer): value is TravelPlan {

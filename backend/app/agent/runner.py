@@ -81,7 +81,7 @@ def run_graph(
     add_message(
         session_id,
         "assistant",
-        str(answer)
+        answer
     )
 
     return answer
