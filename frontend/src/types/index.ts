@@ -36,9 +36,17 @@ export interface AgentError {
 
 export type AgentAnswer = string | NeedInformation | AgentError | TravelPlan
 
+export interface TraceEvent {
+  type: 'state' | 'tool' | 'plan' | 'information' | 'answer'
+  name: string
+  status: 'completed'
+  message: string
+}
+
 export interface ChatResponse {
   user: string
   answer: AgentAnswer
+  trace: TraceEvent[]
 }
 
 export interface ChatMessage {

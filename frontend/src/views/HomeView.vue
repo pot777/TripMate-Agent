@@ -1,13 +1,23 @@
 <script setup lang="ts">
-import { nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useTripStore } from '../stores/trip'
 import ChatSidebar from '../components/ChatSidebar.vue'
 import ChatMessage from '../components/ChatMessage.vue'
+import AgentTrace from '../components/AgentTrace.vue'
 
 const store = useTripStore()
 const input = ref('')
 const chatEnd = ref<HTMLElement | null>(null)
 const suggestions = ['成都 3 天游，预算 3000 元', '周末去上海看展和吃美食', '北京亲子游，行程轻松一点']
+const tracedAssistantId = computed(() => {
+  if (!store.currentTrace.length) return ''
+  return [...store.messages].reverse().find((message) => message.role === 'assistant')?.id || ''
+})
+
+watch(() => store.currentTrace.length, async () => {
+  await nextTick()
+  chatEnd.value?.scrollIntoView({ behavior: 'smooth' })
+})
 
 async function submit(text = input.value) {
   if (!text.trim()) return
@@ -32,8 +42,15 @@ async function submit(text = input.value) {
       </div>
 
       <div v-else class="conversation">
-        <ChatMessage v-for="message in store.messages" :key="message.id" :message="message" />
-        <div v-if="store.loading" class="message-row assistant"><div class="assistant-avatar">T</div><div class="thinking"><i/><i/><i/><span>正在规划旅程…</span></div></div>
+        <template v-for="message in store.messages" :key="message.id">
+          <AgentTrace
+            v-if="message.id === tracedAssistantId"
+            :events="store.currentTrace"
+            :mode="store.traceMode"
+          />
+          <ChatMessage :message="message" />
+        </template>
+        <AgentTrace v-if="store.loading" :events="store.currentTrace" :loading="true" :mode="store.traceMode" />
         <div ref="chatEnd" />
       </div>
 

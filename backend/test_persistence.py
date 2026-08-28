@@ -107,7 +107,24 @@ class PersistenceTest(unittest.TestCase):
                 captured_state.update(initial_state)
                 return {
                     "travel_state": initial_state["travel_state"],
+                    "decision": types.SimpleNamespace(action="modify_plan"),
+                    "observations": [],
                     "answer": "已根据原方案调整第二天行程",
+                }
+
+            def stream(self, initial_state, stream_mode):
+                self.assert_stream_mode = stream_mode
+                yield {
+                    "planner": {
+                        "decision": types.SimpleNamespace(action="modify_plan"),
+                        "step_count": 1,
+                    }
+                }
+                yield {
+                    "modify_plan": {
+                        "travel_state": initial_state["travel_state"],
+                        "answer": "已流式调整第二天行程",
+                    }
                 }
 
         graph_module = types.ModuleType("app.agent.graph")
@@ -125,18 +142,65 @@ class PersistenceTest(unittest.TestCase):
         ):
             sys.modules.pop("app.agent.runner", None)
             runner = importlib.import_module("app.agent.runner")
-            runner.run_graph("第二天换一个轻松一点的地方", conversation_id)
+            _, trace = runner.run_graph(
+                "第二天换一个轻松一点的地方",
+                conversation_id,
+                include_trace=True,
+            )
+            planning_trace = runner._build_trace(
+                message="我想去哈尔滨玩3天",
+                had_current_plan=False,
+                result={
+                    "decision": {"action": "generate_plan"},
+                    "observations": [
+                        {"tool": "get_weather", "result": {"city": "哈尔滨", "raw": "private payload"}},
+                        {"tool": "retrieve_travel_info", "result": {"available": False}},
+                        {"tool": "search_web", "result": {"results": ["large raw result"]}},
+                    ],
+                },
+                answer={"days": 3},
+            )
+            update_state("stream-case", current_plan=manually_edited_plan)
+            stream_events = list(runner.run_graph_stream(
+                "第二天换一个轻松一点的地方",
+                "stream-case",
+            ))
 
         self.assertEqual(captured_state["travel_state"]["current_plan"], manually_edited_plan)
+        self.assertEqual(
+            [event["message"] for event in trace],
+            ["已读取当前旅行方案", "已识别修改需求", "已更新第2天行程"],
+        )
+        self.assertEqual(
+            [event["message"] for event in planning_trace],
+            [
+                "已识别旅行需求",
+                "已查询哈尔滨天气",
+                "知识库未覆盖，已补充网络旅游信息",
+                "已生成3日旅行方案",
+            ],
+        )
+        self.assertNotIn("private payload", json.dumps(planning_trace, ensure_ascii=False))
+        self.assertNotIn("large raw result", json.dumps(planning_trace, ensure_ascii=False))
+        self.assertEqual(
+            [event["event"] for event in stream_events],
+            ["trace", "trace", "trace", "result"],
+        )
+        self.assertEqual(
+            [event["data"].get("name") for event in stream_events[:-1]],
+            ["current_plan", "state_extraction", "modify_plan"],
+        )
+        self.assertEqual(stream_events[-1]["data"]["answer"], "已流式调整第二天行程")
+        self.assertEqual(get_history("stream-case")[-1]["content"], "已流式调整第二天行程")
 
         history = get_history(conversation_id)
         self.assertEqual(len(history), 4)
         self.assertEqual(history[-2]["content"], "第二天换一个轻松一点的地方")
 
         conversations = list_conversations()
-        self.assertEqual(conversations[0]["id"], conversation_id)
-        self.assertEqual(conversations[0]["title"], "哈尔滨3日游")
-        self.assertEqual(conversations[0]["preview"], "第二天换一个轻松一点的地方")
+        persisted_conversation = next(item for item in conversations if item["id"] == conversation_id)
+        self.assertEqual(persisted_conversation["title"], "哈尔滨3日游")
+        self.assertEqual(persisted_conversation["preview"], "第二天换一个轻松一点的地方")
 
         detail = get_conversation_detail(conversation_id)
         self.assertIsNotNone(detail)
@@ -174,7 +238,6 @@ class PersistenceTest(unittest.TestCase):
                 "message": "请问计划玩几天？",
             },
         )
-
 
 if __name__ == "__main__":
     unittest.main()

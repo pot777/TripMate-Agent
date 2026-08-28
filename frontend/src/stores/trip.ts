@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import { getConversation, getConversations, sendChat, updateConversationPlan } from '../api/chat'
+import { getConversation, getConversations, streamChat, updateConversationPlan } from '../api/chat'
 import {
   isTravelPlan,
   type AgentAnswer,
@@ -8,6 +8,7 @@ import {
   type Conversation,
   type ConversationDetail,
   type ItineraryItem,
+  type TraceEvent,
   type TravelPlan,
 } from '../types'
 
@@ -20,6 +21,8 @@ export const useTripStore = defineStore('trip', () => {
   const travelPlan = ref<TravelPlan | null>(null)
   const itinerary = ref<ItineraryItem[]>([])
   const loading = ref(false)
+  const currentTrace = ref<TraceEvent[]>([])
+  const traceMode = ref<'plan' | 'modify'>('plan')
   const historyLoading = ref(false)
   const initialized = ref(false)
   const savingPlan = ref(false)
@@ -200,6 +203,7 @@ export const useTripStore = defineStore('trip', () => {
   async function selectConversation(id: string) {
     if (!id || loading.value) return
     historyLoading.value = true
+    currentTrace.value = []
     error.value = ''
     try {
       const detail = await getConversation(id)
@@ -236,6 +240,8 @@ export const useTripStore = defineStore('trip', () => {
     const message = text.trim()
     if (!message || loading.value) return
     const conversationId = activeConversationId.value || makeId()
+    traceMode.value = travelPlan.value ? 'modify' : 'plan'
+    currentTrace.value = []
     activeConversationId.value = conversationId
     error.value = ''
     messages.value.push({
@@ -246,7 +252,11 @@ export const useTripStore = defineStore('trip', () => {
     })
     loading.value = true
     try {
-      await sendChat(message, conversationId)
+      await streamChat(message, conversationId, (event) => {
+        if (!currentTrace.value.some((item) => item.name === event.name)) {
+          currentTrace.value.push(event)
+        }
+      })
       await refreshConversations()
       const detail = await getConversation(conversationId)
       applyConversationDetail(detail)
@@ -271,6 +281,8 @@ export const useTripStore = defineStore('trip', () => {
     messages.value = []
     travelPlan.value = null
     itinerary.value = []
+    currentTrace.value = []
+    traceMode.value = 'plan'
     error.value = ''
   }
 
@@ -313,6 +325,7 @@ export const useTripStore = defineStore('trip', () => {
   return {
     activeConversationId, conversations, travelConversations,
     messages, travelPlan, itinerary, loading, historyLoading, savingPlan, error,
+    currentTrace, traceMode,
     initialize, refreshConversations, submitMessage, newConversation, selectConversation,
     addItinerary, updateItinerary, removeItinerary,
     beginItineraryReorder, saveItineraryOrder, answerText,
