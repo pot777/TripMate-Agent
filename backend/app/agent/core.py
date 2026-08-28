@@ -1,7 +1,7 @@
 # core.py
 import json
 
-from ..llm import chat_raw
+from ..llm import LLMResponseError, chat_raw, parse_structured_response
 from ..models import AgentAction
 from ..tools.registry import TOOLS
 
@@ -164,13 +164,13 @@ def decide_action(message):
 
 """
 
-    response = chat_raw(prompt)
-
-    data = json.loads(response)
-
-    action = AgentAction(**data)
-
-    return action
+    for attempt in range(2):
+        response = chat_raw(prompt)
+        try:
+            return parse_structured_response(response, AgentAction)
+        except LLMResponseError:
+            if attempt == 1:
+                raise
 
 
 def execute_tool(tool_name, arguments):

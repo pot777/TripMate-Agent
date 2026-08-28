@@ -299,6 +299,10 @@ export const useTripStore = defineStore('trip', () => {
   }
 
   async function removeItinerary(id: string) {
+    if (itinerary.value.length <= 1) {
+      error.value = '行程至少需要保留一天'
+      return false
+    }
     const previous = itinerary.value.map((entry) => ({ ...entry }))
     const next = previous.filter((item) => item.id !== id)
     return persistItinerary(next, previous)

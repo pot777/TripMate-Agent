@@ -70,6 +70,8 @@ button { cursor: pointer; }
 .trace-events { padding: 0 14px 11px 29px; display: grid; gap: 6px; }
 .trace-events p { margin: 0; color: #66766e; font-size: 10px; line-height: 1.55; }
 .trace-check { margin-right: 7px; color: #42946a; font-weight: 700; }
+.trace-unavailable { margin-right: 7px; color: #a27657; font-weight: 700; }
+.trace-events p.unavailable { color: #887566; }
 .trace-pending { margin-right: 8px; color: var(--orange); animation: tracePulse .8s ease-in-out infinite alternate; }
 @keyframes tracePulse { to { opacity: .35; } }
 .composer-wrap { position: fixed; left: 276px; right: 0; bottom: 0; padding: 18px max(6vw,30px) 86px; background: linear-gradient(transparent, #f6f4ee 24%); z-index: 10; }

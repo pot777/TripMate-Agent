@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from datetime import datetime
 import json
+import logging
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
@@ -10,6 +11,9 @@ from .db.database import init_db
 from .memory.store import get_conversation_detail, list_conversations
 from .memory.state import update_state
 from .models import TravelPlan
+
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -50,9 +54,10 @@ def chat_stream(message: str, session_id: str = "default"):
                 payload = json.dumps(item["data"], ensure_ascii=False)
                 event_name = item["data"].get("name", item["event"])
                 timestamp = datetime.now().strftime("%H:%M:%S")
-                print(f"[{timestamp}] yield {event_name}", flush=True)
+                logger.info("[%s] yield %s", timestamp, event_name)
                 yield f"event: {item['event']}\ndata: {payload}\n\n"
         except Exception:
+            logger.exception("Agent stream failed")
             payload = json.dumps(
                 {
                     "type": "error",

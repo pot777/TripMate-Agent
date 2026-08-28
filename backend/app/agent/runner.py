@@ -1,3 +1,4 @@
+import logging
 import re
 
 from .graph import graph, AgentState
@@ -13,6 +14,9 @@ from ..memory.state import (
     get_state,
     update_state
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 def run_graph(
@@ -49,8 +53,7 @@ def run_graph(
     )
     had_current_plan = bool(travel_state.current_plan)
 
-    print("Travel State:")
-    print(travel_state)
+    logger.debug("Loaded travel state for agent run")
 
     # 5. 构造 LangGraph 初始状态
     initial_state = {
@@ -174,20 +177,34 @@ def run_graph_stream(
                 event = None
                 if tool_name == "get_weather":
                     city = _result_value(tool_result, "city")
-                    label = f"已查询{city}天气" if city else "已完成天气查询"
-                    event = _trace_event("tool", tool_name, label)
+                    unavailable = bool(_result_value(tool_result, "error")) or _result_value(tool_result, "available") is False
+                    if unavailable:
+                        label = f"暂未获取到{city}天气" if city else "暂未获取到天气信息"
+                        event = _trace_event("tool", tool_name, label, "unavailable")
+                    else:
+                        label = f"已查询{city}天气" if city else "已完成天气查询"
+                        event = _trace_event("tool", tool_name, label)
                 elif tool_name == "retrieve_travel_info":
                     available = bool(_result_value(tool_result, "available", False))
                     knowledge_unavailable = not available
                     if available:
                         event = _trace_event("tool", tool_name, "已检索旅游信息")
                 elif tool_name == "search_web":
-                    label = (
-                        "知识库未覆盖，已补充网络旅游信息"
-                        if knowledge_unavailable
-                        else "已补充网络旅游信息"
-                    )
-                    event = _trace_event("tool", tool_name, label)
+                    available = bool(_result_value(tool_result, "available", False))
+                    if available:
+                        label = (
+                            "知识库未覆盖，已补充网络旅游信息"
+                            if knowledge_unavailable
+                            else "已补充网络旅游信息"
+                        )
+                        event = _trace_event("tool", tool_name, label)
+                    else:
+                        event = _trace_event(
+                            "tool",
+                            tool_name,
+                            "暂未获取到补充旅游信息",
+                            "unavailable"
+                        )
 
                 if event:
                     yield {"event": "trace", "data": event}
@@ -232,11 +249,11 @@ def run_graph_stream(
     }
 
 
-def _trace_event(event_type, name, message):
+def _trace_event(event_type, name, message, status="completed"):
     return {
         "type": event_type,
         "name": name,
-        "status": "completed",
+        "status": status,
         "message": message
     }
 
@@ -299,20 +316,34 @@ def _build_trace(message, had_current_plan, result, answer):
 
         if tool_name == "get_weather":
             city = _result_value(tool_result, "city")
-            label = f"已查询{city}天气" if city else "已完成天气查询"
-            trace.append(_trace_event("tool", tool_name, label))
+            unavailable = bool(_result_value(tool_result, "error")) or _result_value(tool_result, "available") is False
+            if unavailable:
+                label = f"暂未获取到{city}天气" if city else "暂未获取到天气信息"
+                trace.append(_trace_event("tool", tool_name, label, "unavailable"))
+            else:
+                label = f"已查询{city}天气" if city else "已完成天气查询"
+                trace.append(_trace_event("tool", tool_name, label))
         elif tool_name == "retrieve_travel_info":
             available = bool(_result_value(tool_result, "available", False))
             knowledge_unavailable = not available
             if available:
                 trace.append(_trace_event("tool", tool_name, "已检索旅游信息"))
         elif tool_name == "search_web":
-            label = (
-                "知识库未覆盖，已补充网络旅游信息"
-                if knowledge_unavailable
-                else "已补充网络旅游信息"
-            )
-            trace.append(_trace_event("tool", tool_name, label))
+            available = bool(_result_value(tool_result, "available", False))
+            if available:
+                label = (
+                    "知识库未覆盖，已补充网络旅游信息"
+                    if knowledge_unavailable
+                    else "已补充网络旅游信息"
+                )
+                trace.append(_trace_event("tool", tool_name, label))
+            else:
+                trace.append(_trace_event(
+                    "tool",
+                    tool_name,
+                    "暂未获取到补充旅游信息",
+                    "unavailable"
+                ))
 
     if action == "generate_plan":
         days = _plan_days(answer)

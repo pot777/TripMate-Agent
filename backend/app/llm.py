@@ -1,21 +1,69 @@
 # llm.py
-from openai import OpenAI
-from .config import DEEPSEEK_API_KEY
 import json
+from typing import TypeVar
+
+from openai import OpenAI
+from pydantic import BaseModel, ValidationError
+
+from .config import DEEPSEEK_API_KEY
 from .models import TravelPlan
 
 client = OpenAI(
     api_key=DEEPSEEK_API_KEY,
-    base_url="https://api.deepseek.com"
+    base_url="https://api.deepseek.com",
+    timeout=60.0,
+    max_retries=1
 )
 
 
-def chat_with_llm(message: str):
+class LLMResponseError(RuntimeError):
+    """The LLM responded, but its structured content was unusable."""
+
+
+ModelT = TypeVar("ModelT", bound=BaseModel)
+
+
+def _strip_json_fence(content: str) -> str:
+    content = content.strip()
+    if not content.startswith("```"):
+        return content
+
+    lines = content.splitlines()
+    if lines:
+        lines = lines[1:]
+    if lines and lines[-1].strip() == "```":
+        lines = lines[:-1]
+    return "\n".join(lines).strip()
+
+
+def parse_structured_response(content, model_type: type[ModelT]) -> ModelT:
+    if content is None or not str(content).strip():
+        raise LLMResponseError("LLM returned empty content")
+
+    cleaned = _strip_json_fence(str(content))
+    try:
+        data = json.loads(cleaned)
+    except json.JSONDecodeError as exc:
+        raise LLMResponseError("LLM returned invalid JSON") from exc
 
     try:
-        response = client.chat.completions.create(
-            model="deepseek-v4-flash",
-            messages=[
+        return model_type.model_validate(data)
+    except ValidationError as exc:
+        raise LLMResponseError("LLM response failed schema validation") from exc
+
+
+def _completion_content(messages):
+    response = client.chat.completions.create(
+        model="deepseek-v4-flash",
+        messages=messages
+    )
+    if not response.choices:
+        raise LLMResponseError("LLM returned no choices")
+    return response.choices[0].message.content
+
+
+def chat_with_llm(message: str):
+    messages = [
                 {
                     "role": "system",
                     "content": """
@@ -60,27 +108,25 @@ def chat_with_llm(message: str):
                     "content": message
                 }
             ]
-        )
 
-        content = response.choices[0].message.content
-        data = json.loads(content)
-        plan = TravelPlan(**data)
-        return plan
-
-    except Exception as e:
-        return f"模型调用失败：{str(e)}"
+    for attempt in range(2):
+        content = _completion_content(messages)
+        try:
+            return parse_structured_response(content, TravelPlan)
+        except LLMResponseError:
+            if attempt == 1:
+                raise
 
 
 def chat_raw(message: str):
-
-    response = client.chat.completions.create(
-        model="deepseek-v4-flash",
-        messages=[
+    content = _completion_content(
+        [
             {
                 "role": "user",
                 "content": message
             }
         ]
     )
-
-    return response.choices[0].message.content
+    if content is None or not content.strip():
+        raise LLMResponseError("LLM returned empty content")
+    return content

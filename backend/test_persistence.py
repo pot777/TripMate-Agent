@@ -153,12 +153,25 @@ class PersistenceTest(unittest.TestCase):
                 result={
                     "decision": {"action": "generate_plan"},
                     "observations": [
-                        {"tool": "get_weather", "result": {"city": "哈尔滨", "raw": "private payload"}},
+                        {"tool": "get_weather", "result": {"city": "哈尔滨", "available": True, "raw": "private payload"}},
                         {"tool": "retrieve_travel_info", "result": {"available": False}},
-                        {"tool": "search_web", "result": {"results": ["large raw result"]}},
+                        {"tool": "search_web", "result": {"available": True, "results": ["large raw result"]}},
                     ],
                 },
                 answer={"days": 3},
+            )
+            unavailable_trace = runner._build_trace(
+                message="重庆天气和旅行信息",
+                had_current_plan=False,
+                result={
+                    "decision": {"action": "direct_answer"},
+                    "observations": [
+                        {"tool": "get_weather", "result": {"city": "重庆", "available": False}},
+                        {"tool": "retrieve_travel_info", "result": {"available": False}},
+                        {"tool": "search_web", "result": {"available": False}},
+                    ],
+                },
+                answer="暂未获取到信息",
             )
             update_state("stream-case", current_plan=manually_edited_plan)
             stream_events = list(runner.run_graph_stream(
@@ -182,6 +195,13 @@ class PersistenceTest(unittest.TestCase):
         )
         self.assertNotIn("private payload", json.dumps(planning_trace, ensure_ascii=False))
         self.assertNotIn("large raw result", json.dumps(planning_trace, ensure_ascii=False))
+        self.assertEqual(
+            [(event["status"], event["message"]) for event in unavailable_trace],
+            [
+                ("unavailable", "暂未获取到重庆天气"),
+                ("unavailable", "暂未获取到补充旅游信息"),
+            ],
+        )
         self.assertEqual(
             [event["event"] for event in stream_events],
             ["trace", "trace", "trace", "result"],

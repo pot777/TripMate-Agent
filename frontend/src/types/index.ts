@@ -39,7 +39,7 @@ export type AgentAnswer = string | NeedInformation | AgentError | TravelPlan
 export interface TraceEvent {
   type: 'state' | 'tool' | 'plan' | 'information' | 'answer'
   name: string
-  status: 'completed'
+  status: 'completed' | 'unavailable'
   message: string
 }
 

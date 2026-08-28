@@ -55,7 +55,7 @@ async function submit(text = input.value) {
       </div>
 
       <div class="composer-wrap">
-        <p v-if="store.error" class="error-message">{{ store.error }}，请确认 FastAPI 已启动后重试。</p>
+        <p v-if="store.error" class="error-message">{{ store.error }}</p>
         <form class="composer" @submit.prevent="submit()">
           <textarea v-model="input" rows="1" placeholder="描述你的旅行需求，例如：10 月去成都玩 3 天，预算 3000 元…" :disabled="store.loading" @keydown.enter.exact.prevent="submit()" />
           <button type="submit" :disabled="!input.trim() || store.loading" aria-label="发送旅行需求">↑</button>

@@ -31,8 +31,8 @@ const title = computed(() => {
         <b>{{ expanded ? '收起' : '展开' }}</b>
       </button>
       <div v-if="expanded" class="trace-events">
-        <p v-for="event in events" :key="`${event.type}-${event.name}`">
-          <span class="trace-check">✓</span>{{ event.message }}
+        <p v-for="event in events" :key="`${event.type}-${event.name}`" :class="{ unavailable: event.status === 'unavailable' }">
+          <span :class="event.status === 'unavailable' ? 'trace-unavailable' : 'trace-check'">{{ event.status === 'unavailable' ? '—' : '✓' }}</span>{{ event.message }}
         </p>
         <p v-if="loading"><span class="trace-pending">•</span>{{ events.length ? '正在继续处理…' : '正在分析旅行需求' }}</p>
       </div>

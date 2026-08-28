@@ -1,17 +1,21 @@
 # graph.py
 
+import logging
 from typing import TypedDict
 
 from langgraph.graph import StateGraph, START, END
 
-from ..models import AgentAction
-from ..llm import chat_with_llm
+from ..models import AgentAction, TravelPlan
+from ..llm import LLMResponseError, chat_with_llm
 
 from .core import (
     decide_action,
     execute_tool,
     build_tool_call_key
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class AgentState(TypedDict, total=False):
@@ -75,8 +79,7 @@ def planner_node(state: AgentState):
         "travel_state",
         {}
     )
-    print("Planner Travel State:")
-    print(travel_state)
+    logger.debug("Planner node started")
 
 
     current_message = f"""
@@ -117,8 +120,7 @@ def planner_node(state: AgentState):
     )
 
 
-    print("Graph Planner Decision:")
-    print(decision)
+    logger.info("Planner selected action=%s tool=%s", decision.action, decision.tool)
 
 
     return {
@@ -135,8 +137,7 @@ def route_action(state: AgentState):
 
     decision = state["decision"]
 
-    print("Graph Route:")
-    print(decision.action)
+    logger.debug("Routing action=%s", decision.action)
 
 
     if decision.action == "tool":
@@ -199,8 +200,12 @@ def tool_node(state: AgentState):
         )
 
 
-    print("Graph Tool Observation:")
-    print(tool_result)
+    logger.info(
+        "Tool completed tool=%s available=%s failed=%s",
+        decision.tool,
+        tool_result.get("available") if isinstance(tool_result, dict) else None,
+        isinstance(tool_result, dict) and "error" in tool_result
+    )
 
 
     observations = list(
@@ -331,9 +336,11 @@ def generate_plan_node(state: AgentState):
         final_prompt
     )
 
+    if not isinstance(answer, TravelPlan):
+        raise LLMResponseError("Plan generation did not return a TravelPlan")
 
-    print("Graph Final Plan:")
-    print(answer)
+
+    logger.info("Travel plan generated destination=%s days=%s", answer.destination, answer.days)
 
 
     return {
@@ -421,9 +428,11 @@ def modify_plan_node(state: AgentState):
         prompt
     )
 
+    if not isinstance(answer, TravelPlan):
+        raise LLMResponseError("Plan modification did not return a TravelPlan")
 
-    print("Graph Modified Plan:")
-    print(answer)
+
+    logger.info("Travel plan modified destination=%s days=%s", answer.destination, answer.days)
 
 
     return {

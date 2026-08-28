@@ -1,5 +1,10 @@
-from ..llm import chat_raw
 import json
+import logging
+
+from ..llm import chat_raw
+
+
+logger = logging.getLogger(__name__)
 
 
 STATE_EXTRACT_PROMPT = """
@@ -35,11 +40,6 @@ def extract_state(message):
 
     response = chat_raw(prompt)
 
-    print("======STATE EXTRACT RAW======")
-    print(response)
-    print("============================")
-
-
     try:
 
         # 去除 Markdown JSON 包裹
@@ -61,9 +61,7 @@ def extract_state(message):
         return json.loads(response)
 
 
-    except Exception as e:
-
-        print("State Extract Parse Failed:")
-        print(e)
+    except Exception:
+        logger.warning("State extraction response could not be parsed", exc_info=True)
 
         return {}
