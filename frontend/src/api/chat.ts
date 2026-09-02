@@ -1,6 +1,12 @@
 import type { AgentAnswer, ChatResponse, Conversation, ConversationDetail, PlanUpdateResponse, TraceEvent, TravelPlan } from '../types'
 
 const SSE_IDLE_TIMEOUT_MS = 90_000
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || '').trim().replace(/\/+$/, '')
+
+function apiUrl(path: string): string {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  return BACKEND_URL ? `${BACKEND_URL}${normalizedPath}` : `/api${normalizedPath}`
+}
 
 class SseBusinessError extends Error {}
 
@@ -45,7 +51,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 
 export async function sendChat(message: string, conversationId: string): Promise<ChatResponse> {
   const query = new URLSearchParams({ message, session_id: conversationId })
-  return requestJson<ChatResponse>(`/api/chat?${query.toString()}`)
+  return requestJson<ChatResponse>(apiUrl(`/chat?${query.toString()}`))
 }
 
 export async function streamChat(
@@ -70,7 +76,7 @@ export async function streamChat(
   resetTimeout()
 
   try {
-    const response = await fetch(`/api/chat/stream?${query.toString()}`, {
+    const response = await fetch(apiUrl(`/chat/stream?${query.toString()}`), {
       headers: { Accept: 'text/event-stream' },
       signal: controller.signal,
     })
@@ -146,15 +152,15 @@ export async function streamChat(
 }
 
 export function getConversations(): Promise<Conversation[]> {
-  return requestJson<Conversation[]>('/api/conversations')
+  return requestJson<Conversation[]>(apiUrl('/conversations'))
 }
 
 export function getConversation(conversationId: string): Promise<ConversationDetail> {
-  return requestJson<ConversationDetail>(`/api/conversations/${encodeURIComponent(conversationId)}`)
+  return requestJson<ConversationDetail>(apiUrl(`/conversations/${encodeURIComponent(conversationId)}`))
 }
 
 export function updateConversationPlan(conversationId: string, plan: TravelPlan): Promise<PlanUpdateResponse> {
-  return requestJson<PlanUpdateResponse>(`/api/conversations/${encodeURIComponent(conversationId)}/plan`, {
+  return requestJson<PlanUpdateResponse>(apiUrl(`/conversations/${encodeURIComponent(conversationId)}/plan`), {
     method: 'PUT',
     headers: {
       Accept: 'application/json',

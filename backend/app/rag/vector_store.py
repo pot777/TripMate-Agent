@@ -1,15 +1,19 @@
 # vector_store.py
 import json
-import os
+import logging
+from pathlib import Path
 
 import chromadb
 
+from ..config import CHROMA_DB_PATH
 from .embedding import encode_text
 
 
-CHROMA_PATH = "./chroma_db"
+logger = logging.getLogger(__name__)
 
-DOCUMENT_PATH = "./app/rag/documents/chengdu.json"
+CHROMA_PATH = CHROMA_DB_PATH
+
+DOCUMENT_PATH = Path(__file__).resolve().parent / "documents" / "chengdu.json"
 
 
 client = chromadb.PersistentClient(
@@ -94,9 +98,21 @@ def build_vector_store():
     )
 
 
-    print(
-        f"Added {len(documents)} documents"
-    )
+    logger.info("Added %s seed documents to the travel knowledge store", len(documents))
+
+
+def ensure_vector_store_initialized():
+    document_count = collection.count()
+
+    if document_count > 0:
+        logger.info(
+            "Travel knowledge store already initialized with %s documents",
+            document_count
+        )
+        return
+
+    logger.info("Travel knowledge store is empty; loading seed documents")
+    build_vector_store()
 
 
 

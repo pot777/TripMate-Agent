@@ -4,13 +4,16 @@ import json
 import logging
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from .agent.runner import run_graph, run_graph_stream
+from .config import FRONTEND_ORIGIN
 from .db.database import init_db
 from .memory.store import get_conversation_detail, list_conversations
 from .memory.state import update_state
 from .models import TravelPlan
+from .rag.vector_store import ensure_vector_store_initialized
 
 
 logger = logging.getLogger(__name__)
@@ -19,12 +22,27 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    ensure_vector_store_initialized()
     yield
 
 
 app = FastAPI(
     title="TripMate Agent API",
     lifespan=lifespan
+)
+
+allowed_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+frontend_origin = FRONTEND_ORIGIN
+
+if frontend_origin and frontend_origin not in allowed_origins:
+    allowed_origins.append(frontend_origin)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "PUT", "OPTIONS"],
+    allow_headers=["Accept", "Content-Type"],
 )
 
 
